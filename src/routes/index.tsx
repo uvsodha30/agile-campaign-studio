@@ -406,7 +406,7 @@ function Index() {
                   <Stat
                     icon={<Gauge className="size-3.5" />}
                     label="Sprint window"
-                    value={`${formatShort(sprint[0].start)} – ${formatShort(sprint[3].end)}`}
+                    value={`${formatShort(sprint[0]!.start)} – ${formatShort(sprint[sprint.length - 1]!.end)}`}
                   />
                   <Stat
                     icon={<CheckCircle2 className="size-3.5" />}

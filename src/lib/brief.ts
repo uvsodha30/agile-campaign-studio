@@ -11,6 +11,15 @@ export const GOALS: Goal[] = [
 export const CHANNELS: Channel[] = ["Paid Search", "Social Media", "Email", "Programmatic"];
 export const RISKS: RiskLevel[] = ["Low", "Medium", "High"];
 
+export type SprintWeeks = 4 | 6 | 8 | 12;
+
+export const SPRINT_OPTIONS: { weeks: SprintWeeks; label: string }[] = [
+  { weeks: 4, label: "4 Weeks (Quick Launch)" },
+  { weeks: 6, label: "6 Weeks (Standard Campaign)" },
+  { weeks: 8, label: "8 Weeks (Multi-Channel Launch)" },
+  { weeks: 12, label: "12 Weeks (Enterprise Growth Campaign)" },
+];
+
 export type BriefInput = {
   name: string;
   goal: Goal;
@@ -18,6 +27,7 @@ export type BriefInput = {
   budget: number;
   launchDate: string; // yyyy-mm-dd
   risk: RiskLevel;
+  weeks: SprintWeeks;
 };
 
 export type SprintWeek = {
@@ -38,6 +48,10 @@ export type RaidItem = {
 };
 
 export const SPRINT_DURATION_DAYS = 28;
+
+export function sprintDays(weeks: SprintWeeks) {
+  return weeks * 7;
+}
 
 export function addDays(date: Date, days: number) {
   const d = new Date(date.getTime());
@@ -75,43 +89,67 @@ export function campaignDurationDays(launchDate: string) {
   return Math.max(diff, 1);
 }
 
-export function dailyBurnRate(budget: number, launchDate: string) {
-  const days = Math.max(campaignDurationDays(launchDate), SPRINT_DURATION_DAYS);
-  return budget / days;
+/** Total budget spread across the selected sprint duration. */
+export function dailyBurnRate(budget: number, weeks: SprintWeeks) {
+  return budget / Math.max(sprintDays(weeks), 1);
 }
 
+const PHASES = [
+  "Discovery & Strategy",
+  "Content & Creative Build",
+  "Technical & QA",
+  "Media Launch",
+  "Post-Launch Optimization",
+] as const;
+
 const WEEK_TASKS: Record<string, string[]> = {
-  Discovery: [
+  "Discovery & Strategy": [
     "Kickoff workshop & stakeholder alignment",
     "Audience research and segment definition",
     "Competitive & channel landscape audit",
     "Confirm KPIs and measurement plan",
   ],
-  "Creative/Tech": [
+  "Content & Creative Build": [
     "Concept development and messaging matrix",
     "Produce channel-specific creative assets",
-    "Build landing pages & tracking pixels",
+    "Build landing pages and content variants",
     "Internal creative review round",
   ],
-  "QA & Testing": [
+  "Technical & QA": [
+    "Tracking, pixels and attribution validation",
     "Cross-device and cross-browser QA",
-    "Tracking / attribution validation",
     "A/B test variant setup",
     "Legal and brand compliance sign-off",
   ],
-  Launch: [
+  "Media Launch": [
     "Final budget pacing configuration",
     "Staged go-live across channels",
     "Day-1 performance monitoring",
-    "Post-launch retro & optimization backlog",
+    "Daily pacing and delivery checks",
+  ],
+  "Post-Launch Optimization": [
+    "Creative refresh based on early signals",
+    "Reallocate spend to top-performing channels",
+    "Audience and bid optimization pass",
+    "Performance readout & optimization backlog",
   ],
 };
 
-export function buildSprint(launchDate: string): SprintWeek[] {
+/** Evenly distributes phases across the selected number of weeks. */
+export function phasePlan(weeks: SprintWeeks): string[] {
+  const phases =
+    weeks < PHASES.length ? PHASES.slice(0, weeks) : (PHASES as readonly string[]);
+  return Array.from({ length: weeks }, (_, i) =>
+    phases[Math.min(Math.floor((i * phases.length) / weeks), phases.length - 1)]!,
+  );
+}
+
+export function buildSprint(launchDate: string, weeks: SprintWeeks): SprintWeek[] {
+  const plan = phasePlan(weeks);
   const launch = parseDate(launchDate);
-  const start = addDays(launch, -SPRINT_DURATION_DAYS);
-  const phases = ["Discovery", "Creative/Tech", "QA & Testing", "Launch"];
-  return phases.map((phase, i) => ({
+  const launchWeek = Math.max(plan.indexOf("Media Launch"), 0);
+  const start = addDays(launch, -launchWeek * 7);
+  return plan.map((phase, i) => ({
     id: `week-${i + 1}`,
     title: `Week ${i + 1}`,
     phase,
@@ -119,6 +157,10 @@ export function buildSprint(launchDate: string): SprintWeek[] {
     end: addDays(start, i * 7 + 6),
     tasks: WEEK_TASKS[phase] ?? [],
   }));
+}
+
+export function launchWeekIndex(weeks: SprintWeeks) {
+  return Math.max(phasePlan(weeks).indexOf("Media Launch"), 0);
 }
 
 const CHANNEL_RAID: Record<Channel, Omit<RaidItem, "id" | "level">> = {
@@ -144,10 +186,21 @@ const CHANNEL_RAID: Record<Channel, Omit<RaidItem, "id" | "level">> = {
   },
 };
 
-export function buildRaid(channels: Channel[], risk: RiskLevel, goal: Goal): RaidItem[] {
+export function buildRaid(
+  channels: Channel[],
+  risk: RiskLevel,
+  goal: Goal,
+  weeks: SprintWeeks,
+): RaidItem[] {
+  const order: RiskLevel[] = ["High", "Medium", "Low"];
+  /** Longer campaigns add exposure: scale each risk up a level on long sprints. */
+  const bump = (level: RiskLevel, steps: number): RiskLevel =>
+    order[Math.max(order.indexOf(level) - steps, 0)]!;
+  const scale = weeks >= 12 ? 1 : 0;
+
   const base: RaidItem[] = channels.map((c, i) => ({
     id: `raid-${i}`,
-    level: risk,
+    level: bump(risk, scale),
     ...CHANNEL_RAID[c],
   }));
 
@@ -157,28 +210,48 @@ export function buildRaid(channels: Channel[], risk: RiskLevel, goal: Goal): Rai
     level: risk === "High" ? "High" : "Medium",
     description:
       goal === "Product Launch"
-        ? "Product availability and launch messaging are locked before Week 4 go-live."
+        ? `Product availability and launch messaging are locked before the Week ${launchWeekIndex(weeks) + 1} go-live.`
         : goal === "Lead Generation"
           ? "Sales team capacity can absorb forecasted MQL volume within SLA."
           : goal === "Retention"
             ? "Existing customer data is accurate enough for lifecycle segmentation."
-            : "Brand guidelines remain stable throughout the 4-week sprint.",
+            : `Brand guidelines remain stable throughout the ${weeks}-week sprint.`,
     mitigation: "Confirm in the Week 1 kickoff and re-validate at each weekly stand-up.",
   });
 
-  if (risk === "High") {
+  if (risk === "High" || weeks <= 4) {
     base.push({
       id: "raid-budget",
       category: "Risk",
-      level: "High",
-      description: "Aggressive timeline leaves no contingency if any approval gate slips.",
+      level: weeks <= 4 ? "High" : "Medium",
+      description:
+        weeks <= 4
+          ? "A 4-week quick launch leaves no contingency if any approval gate slips."
+          : "Aggressive delivery targets leave limited contingency across approval gates.",
       mitigation: "Hold 10% budget reserve and pre-book an expedited approval window.",
     });
   }
 
-  const order: RiskLevel[] = ["High", "Medium", "Low"];
+  if (weeks >= 8) {
+    base.push({
+      id: "raid-pacing",
+      category: "Risk",
+      level: weeks >= 12 ? "High" : "Medium",
+      description: `A ${weeks}-week runway increases budget-pacing drift and creative fatigue over ${sprintDays(weeks)} days of spend.`,
+      mitigation: "Set bi-weekly pacing reviews and schedule a creative refresh mid-flight.",
+    });
+    base.push({
+      id: "raid-stakeholder",
+      category: "Dependency",
+      level: "Medium",
+      description: "Long campaigns risk stakeholder turnover and shifting priorities mid-flight.",
+      mitigation: "Lock a monthly steering review with named decision-makers and deputies.",
+    });
+  }
+
+  const max = weeks >= 8 ? 7 : 5;
   return base
-    .slice(0, 5)
+    .slice(0, max)
     .sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level))
     .map((item, i) => ({ ...item, id: `raid-${i}` }));
 }
@@ -196,7 +269,11 @@ export function loadBriefs(): SavedBrief[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as SavedBrief[]) : [];
+    if (!raw) return [];
+    return (JSON.parse(raw) as SavedBrief[]).map((b) => ({
+      ...b,
+      input: { ...b.input, weeks: (b.input.weeks ?? 4) as SprintWeeks },
+    }));
   } catch {
     return [];
   }
@@ -215,7 +292,8 @@ export function toJiraMarkdown(input: BriefInput, sprint: SprintWeek[], raid: Ra
   lines.push(`*Channels:* ${input.channels.join(", ") || "—"}`);
   lines.push(`*Budget:* ${formatCurrency(input.budget)}`);
   lines.push(`*Launch:* ${formatDate(parseDate(input.launchDate))}`);
-  lines.push(`*Daily burn:* ${formatCurrency(dailyBurnRate(input.budget, input.launchDate))}`);
+  lines.push(`*Sprint duration:* ${input.weeks} weeks (${sprintDays(input.weeks)} days)`);
+  lines.push(`*Daily burn:* ${formatCurrency(dailyBurnRate(input.budget, input.weeks))}`);
   lines.push(`*Risk sensitivity:* ${input.risk}`);
   lines.push("");
   lines.push("h2. Sprint Plan");

@@ -48,6 +48,8 @@ import {
   parseDate,
   persistBriefs,
   RISKS,
+  SPRINT_OPTIONS,
+  sprintDays,
   toAsanaTemplate,
   toJiraMarkdown,
   type BriefInput,
@@ -55,6 +57,7 @@ import {
   type Goal,
   type RiskLevel,
   type SavedBrief,
+  type SprintWeeks,
 } from "@/lib/brief";
 
 export const Route = createFileRoute("/")({
@@ -90,6 +93,7 @@ const emptyInput: BriefInput = {
   budget: 50000,
   launchDate: defaultDate(),
   risk: "Medium",
+  weeks: 6,
 };
 
 const levelStyles: Record<RiskLevel, string> = {
@@ -108,9 +112,12 @@ function Index() {
     setSaved(loadBriefs());
   }, []);
 
-  const sprint = useMemo(() => (brief ? buildSprint(brief.launchDate) : []), [brief]);
+  const sprint = useMemo(
+    () => (brief ? buildSprint(brief.launchDate, brief.weeks) : []),
+    [brief],
+  );
   const raid = useMemo(
-    () => (brief ? buildRaid(brief.channels, brief.risk, brief.goal) : []),
+    () => (brief ? buildRaid(brief.channels, brief.risk, brief.goal, brief.weeks) : []),
     [brief],
   );
 
@@ -277,6 +284,27 @@ function Index() {
             </div>
 
             <div className="space-y-2">
+              <Label>Sprint Duration</Label>
+              <Select
+                value={String(form.weeks)}
+                onValueChange={(v) =>
+                  setForm({ ...form, weeks: Number(v) as SprintWeeks })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SPRINT_OPTIONS.map((o) => (
+                    <SelectItem key={o.weeks} value={String(o.weeks)}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Risk Sensitivity Level</Label>
               <div className="grid grid-cols-3 gap-2 rounded-xl bg-secondary p-1">
                 {RISKS.map((r) => (
@@ -374,6 +402,9 @@ function Index() {
                       <Badge className="border-0 bg-primary-foreground/15 text-primary-foreground">
                         Risk: {brief.risk}
                       </Badge>
+                      <Badge className="border-0 bg-primary-foreground/15 text-primary-foreground">
+                        {brief.weeks}-week sprint
+                      </Badge>
                       {brief.channels.map((c) => (
                         <Badge
                           key={c}
@@ -389,10 +420,10 @@ function Index() {
                       <Flame className="size-3" /> Daily burn rate
                     </p>
                     <p className="text-2xl font-bold tabular-nums">
-                      {formatCurrency(dailyBurnRate(brief.budget, brief.launchDate))}
+                      {formatCurrency(dailyBurnRate(brief.budget, brief.weeks))}
                     </p>
                     <p className="text-xs opacity-75">
-                      {formatCurrency(brief.budget)} total
+                      {formatCurrency(brief.budget)} over {sprintDays(brief.weeks)} days
                     </p>
                   </div>
                 </div>
@@ -419,7 +450,7 @@ function Index() {
 
               <section className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-panel)]">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  4-Week Sprint Schedule
+                  {brief.weeks}-Week Sprint Schedule
                 </h3>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   {sprint.map((w, i) => {
@@ -478,7 +509,7 @@ function Index() {
                             );
                           })}
                         </ul>
-                        {i === 3 && (
+                        {w.phase === "Media Launch" && i === sprint.findIndex((x) => x.phase === "Media Launch") && (
                           <p className="mt-3 text-xs text-muted-foreground">
                             Go-live week — burn rate applies from{" "}
                             {formatShort(parseDate(brief.launchDate))}.

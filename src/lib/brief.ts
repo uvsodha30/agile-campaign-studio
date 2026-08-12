@@ -200,7 +200,7 @@ export function buildRaid(
 
   const base: RaidItem[] = channels.map((c, i) => ({
     id: `raid-${i}`,
-    level: bump(risk, weeks >= 8 ? scale + (weeks >= 12 ? 0 : 1) * 0 : 0) ,
+    level: bump(risk, scale),
     ...CHANNEL_RAID[c],
   }));
 

@@ -126,12 +126,19 @@ function Index() {
     }));
 
   const generate = () => {
-    if (!form.name.trim()) return toast.error("Add a campaign name first.");
-    if (form.channels.length === 0) return toast.error("Select at least one channel.");
+    if (!form.name.trim()) {
+      toast.error("Add a campaign name first.");
+      return;
+    }
+    if (form.channels.length === 0) {
+      toast.error("Select at least one channel.");
+      return;
+    }
     setBrief({ ...form, name: form.name.trim() });
     setDone([]);
     toast.success("Campaign brief generated.");
   };
+
 
   const copy = async (text: string, label: string) => {
     try {

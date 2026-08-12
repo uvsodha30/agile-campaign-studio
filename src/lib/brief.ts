@@ -269,7 +269,11 @@ export function loadBriefs(): SavedBrief[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as SavedBrief[]) : [];
+    if (!raw) return [];
+    return (JSON.parse(raw) as SavedBrief[]).map((b) => ({
+      ...b,
+      input: { ...b.input, weeks: (b.input.weeks ?? 4) as SprintWeeks },
+    }));
   } catch {
     return [];
   }

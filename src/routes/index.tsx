@@ -115,6 +115,8 @@ function Index() {
   const [brief, setBrief] = useState<BriefInput | null>(null);
   const [done, setDone] = useState<string[]>([]);
   const [saved, setSaved] = useState<SavedBrief[]>([]);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
 
   useEffect(() => {
     setSaved(loadBriefs());

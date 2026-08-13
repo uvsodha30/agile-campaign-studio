@@ -39,6 +39,7 @@ import {
   buildRaid,
   buildSprint,
   CHANNELS,
+  CHANNEL_SHORT,
   dailyBurnRate,
   formatCurrency,
   formatDate,
@@ -47,6 +48,7 @@ import {
   loadBriefs,
   parseDate,
   persistBriefs,
+  PRESETS,
   RISKS,
   SPRINT_OPTIONS,
   sprintDays,
@@ -55,10 +57,12 @@ import {
   type BriefInput,
   type Channel,
   type Goal,
+  type IndustryPreset,
   type RiskLevel,
   type SavedBrief,
   type SprintWeeks,
 } from "@/lib/brief";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({

@@ -132,7 +132,22 @@ function Index() {
   const totalTasks = sprint.reduce((n, w) => n + w.tasks.length, 0);
   const progress = totalTasks ? Math.round((done.length / totalTasks) * 100) : 0;
 
+  const applyPreset = (p: IndustryPreset) => {
+    setActivePreset(p.id);
+    setForm((f) => ({
+      ...f,
+      name: f.name.trim() || p.namePlaceholder,
+      goal: p.goal,
+      channels: p.channels,
+      risk: p.risk,
+      weeks: p.weeks,
+      budget: p.budget,
+    }));
+    toast.success(`${p.label} preset applied.`);
+  };
+
   const toggleChannel = (c: Channel) =>
+
     setForm((f) => ({
       ...f,
       channels: f.channels.includes(c)
@@ -259,7 +274,8 @@ function Index() {
                           : "border-border bg-secondary text-secondary-foreground hover:border-primary/40 hover:text-primary",
                       )}
                     >
-                      {c}
+                      {CHANNEL_SHORT[c]}
+
                     </button>
                   );
                 })}
@@ -418,7 +434,8 @@ function Index() {
                           key={c}
                           className="border-0 bg-primary-foreground/10 text-primary-foreground"
                         >
-                          {c}
+                          {CHANNEL_SHORT[c] ?? c}
+
                         </Badge>
                       ))}
                     </div>

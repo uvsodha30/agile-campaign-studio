@@ -400,7 +400,7 @@ export function buildRaid(
     });
   }
 
-  const max = weeks >= 8 ? 7 : 5;
+  const max = weeks >= 8 ? 10 : 8;
   return base
     .slice(0, max)
     .sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level))

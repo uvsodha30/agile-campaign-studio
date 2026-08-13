@@ -477,3 +477,73 @@ export function toAsanaTemplate(input: BriefInput, sprint: SprintWeek[], raid: R
   );
   return lines.join("\n");
 }
+
+export type IndustryPreset = {
+  id: string;
+  label: string;
+  goal: Goal;
+  channels: Channel[];
+  risk: RiskLevel;
+  weeks: SprintWeeks;
+  budget: number;
+  namePlaceholder: string;
+};
+
+export const PRESETS: IndustryPreset[] = [
+  {
+    id: "saas",
+    label: "SaaS Release",
+    goal: "SaaS Product Launch (PLG & User Onboarding)",
+    channels: [
+      "Product-Led / In-App (Onboarding Flows, Pop-ups)",
+      "Email & Lifecycle Marketing",
+      "Content & SEO Strategy",
+    ],
+    risk: "Medium",
+    weeks: 6,
+    budget: 60000,
+    namePlaceholder: "PLG Onboarding Release",
+  },
+  {
+    id: "ecom",
+    label: "E-Commerce Growth",
+    goal: "Lead Generation & Conversion Optimization",
+    channels: [
+      "Digital Ad Networks (Paid Search, Social, Display)",
+      "Email & Lifecycle Marketing",
+      "Content & SEO Strategy",
+    ],
+    risk: "High",
+    weeks: 8,
+    budget: 120000,
+    namePlaceholder: "Peak Season Conversion Push",
+  },
+  {
+    id: "it",
+    label: "IT Migration",
+    goal: "Enterprise Software Release / IT Migration",
+    channels: [
+      "Developer / Tech Docs & API Portals",
+      "Email & Lifecycle Marketing",
+      "Outbound Sales Enablement & Events",
+    ],
+    risk: "High",
+    weeks: 12,
+    budget: 250000,
+    namePlaceholder: "Platform Cutover Program",
+  },
+  {
+    id: "marketing",
+    label: "Digital Marketing",
+    goal: "Brand Awareness & Market Expansion",
+    channels: [
+      "Digital Ad Networks (Paid Search, Social, Display)",
+      "Content & SEO Strategy",
+      "Outbound Sales Enablement & Events",
+    ],
+    risk: "Medium",
+    weeks: 4,
+    budget: 45000,
+    namePlaceholder: "Market Expansion Sprint",
+  },
+];

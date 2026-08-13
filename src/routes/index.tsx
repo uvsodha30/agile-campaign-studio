@@ -92,13 +92,17 @@ function defaultDate() {
 
 const emptyInput: BriefInput = {
   name: "",
-  goal: "Product Launch",
-  channels: ["Paid Search", "Social Media"],
+  goal: "SaaS Product Launch (PLG & User Onboarding)",
+  channels: [
+    "Product-Led / In-App (Onboarding Flows, Pop-ups)",
+    "Email & Lifecycle Marketing",
+  ],
   budget: 50000,
   launchDate: defaultDate(),
   risk: "Medium",
   weeks: 6,
 };
+
 
 const levelStyles: Record<RiskLevel, string> = {
   High: "bg-destructive/10 text-destructive border-destructive/25",

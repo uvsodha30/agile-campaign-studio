@@ -1,15 +1,49 @@
-export type Goal = "Product Launch" | "Brand Awareness" | "Lead Generation" | "Retention";
-export type Channel = "Paid Search" | "Social Media" | "Email" | "Programmatic";
+export type Goal =
+  | "SaaS Product Launch (PLG & User Onboarding)"
+  | "Enterprise Software Release / IT Migration"
+  | "Customer Retention & Churn Reduction"
+  | "Lead Generation & Conversion Optimization"
+  | "Brand Awareness & Market Expansion"
+  | "Feature Rollout & Growth Experimentation";
+
+export type Channel =
+  | "Digital Ad Networks (Paid Search, Social, Display)"
+  | "Product-Led / In-App (Onboarding Flows, Pop-ups)"
+  | "Email & Lifecycle Marketing"
+  | "Content & SEO Strategy"
+  | "Developer / Tech Docs & API Portals"
+  | "Outbound Sales Enablement & Events";
+
 export type RiskLevel = "Low" | "Medium" | "High";
 
 export const GOALS: Goal[] = [
-  "Product Launch",
-  "Brand Awareness",
-  "Lead Generation",
-  "Retention",
+  "SaaS Product Launch (PLG & User Onboarding)",
+  "Enterprise Software Release / IT Migration",
+  "Customer Retention & Churn Reduction",
+  "Lead Generation & Conversion Optimization",
+  "Brand Awareness & Market Expansion",
+  "Feature Rollout & Growth Experimentation",
 ];
-export const CHANNELS: Channel[] = ["Paid Search", "Social Media", "Email", "Programmatic"];
+export const CHANNELS: Channel[] = [
+  "Digital Ad Networks (Paid Search, Social, Display)",
+  "Product-Led / In-App (Onboarding Flows, Pop-ups)",
+  "Email & Lifecycle Marketing",
+  "Content & SEO Strategy",
+  "Developer / Tech Docs & API Portals",
+  "Outbound Sales Enablement & Events",
+];
 export const RISKS: RiskLevel[] = ["Low", "Medium", "High"];
+
+/** Short labels for pills/badges where the full channel name is too long. */
+export const CHANNEL_SHORT: Record<Channel, string> = {
+  "Digital Ad Networks (Paid Search, Social, Display)": "Digital Ads",
+  "Product-Led / In-App (Onboarding Flows, Pop-ups)": "Product-Led / In-App",
+  "Email & Lifecycle Marketing": "Email & Lifecycle",
+  "Content & SEO Strategy": "Content & SEO",
+  "Developer / Tech Docs & API Portals": "Dev Docs & API",
+  "Outbound Sales Enablement & Events": "Sales & Events",
+};
+
 
 export type SprintWeeks = 4 | 6 | 8 | 12;
 

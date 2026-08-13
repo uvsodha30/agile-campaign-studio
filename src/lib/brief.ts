@@ -198,26 +198,141 @@ export function launchWeekIndex(weeks: SprintWeeks) {
 }
 
 const CHANNEL_RAID: Record<Channel, Omit<RaidItem, "id" | "level">> = {
-  "Paid Search": {
+  "Digital Ad Networks (Paid Search, Social, Display)": {
     category: "Risk",
-    description: "Auction CPC inflation on core keywords erodes efficiency before launch.",
-    mitigation: "Lock in bid caps, build a defensive brand-term campaign, review CPCs weekly.",
+    description:
+      "Ad-platform policy reviews and auction CPC inflation delay or erode paid delivery.",
+    mitigation:
+      "Pre-submit creative 5 days early, ship 3+ variants per placement, and cap bids with weekly CPC reviews.",
   },
-  "Social Media": {
+  "Product-Led / In-App (Onboarding Flows, Pop-ups)": {
     category: "Risk",
-    description: "Creative fatigue and platform ad-policy rejections delay in-feed placements.",
-    mitigation: "Ship 3+ creative variants per placement and pre-submit assets 5 days early.",
+    description:
+      "In-app onboarding flows depend on release trains; adoption bottlenecks can stall activation.",
+    mitigation:
+      "Gate flows behind feature flags, instrument funnel events, and run a 10% canary cohort first.",
   },
-  Email: {
+  "Email & Lifecycle Marketing": {
     category: "Dependency",
-    description: "Deliverability depends on CRM list hygiene and domain warm-up completing on time.",
-    mitigation: "Run seed-list tests in Week 3 and stagger sends to protect sender reputation.",
+    description:
+      "Deliverability depends on CRM list hygiene, consent records, and domain warm-up finishing on time.",
+    mitigation:
+      "Run seed-list tests one week ahead and stagger sends to protect sender reputation.",
   },
-  Programmatic: {
+  "Content & SEO Strategy": {
+    category: "Assumption",
+    description:
+      "Organic content compounds slower than the sprint window and depends on indexation timing.",
+    mitigation:
+      "Pair evergreen content with paid amplification and track indexation in Search Console weekly.",
+  },
+  "Developer / Tech Docs & API Portals": {
     category: "Issue",
-    description: "DSP inventory and brand-safety allowlists are not finalized with the trading desk.",
-    mitigation: "Confirm PMP deals in Week 2 and enforce pre-bid brand-safety segments.",
+    description:
+      "API rate limits, sandbox keys, and doc versioning are not finalized for external developers.",
+    mitigation:
+      "Publish versioned docs, raise sandbox rate limits, and load-test the portal before go-live.",
   },
+  "Outbound Sales Enablement & Events": {
+    category: "Dependency",
+    description:
+      "Sales capacity, enablement collateral, and event lead times gate pipeline conversion.",
+    mitigation:
+      "Lock enablement sessions two weeks out and confirm SLA-backed lead routing with sales ops.",
+  },
+};
+
+/** Goal-specific RAID items spanning IT, SaaS, product, and marketing programs. */
+const GOAL_RAID: Record<Goal, Omit<RaidItem, "id" | "level">[]> = {
+  "SaaS Product Launch (PLG & User Onboarding)": [
+    {
+      category: "Risk",
+      description:
+        "Self-serve signup friction and activation drop-off block product-led adoption at launch.",
+      mitigation:
+        "Instrument activation funnel events and run onboarding A/B tests from Week 1 of live traffic.",
+    },
+    {
+      category: "Dependency",
+      description:
+        "Billing, entitlement, and trial-to-paid logic must ship with the onboarding flow.",
+      mitigation: "Freeze billing scope early and run an end-to-end trial conversion rehearsal.",
+    },
+  ],
+  "Enterprise Software Release / IT Migration": [
+    {
+      category: "Risk",
+      description:
+        "Security and compliance review (SOC 2 / GDPR / pen-test remediation) can block the release gate.",
+      mitigation:
+        "Book the security review at the halfway point and track remediation items as release blockers.",
+    },
+    {
+      category: "Issue",
+      description:
+        "Data migration, legacy integrations, and API rate limits threaten cutover stability.",
+      mitigation:
+        "Run a dry-run migration in staging, agree a rollback window, and pre-negotiate rate-limit headroom.",
+    },
+    {
+      category: "Dependency",
+      description:
+        "End-user adoption depends on IT training, change management, and support desk readiness.",
+      mitigation: "Publish enablement docs and staff a hypercare support window post-cutover.",
+    },
+  ],
+  "Customer Retention & Churn Reduction": [
+    {
+      category: "Assumption",
+      description:
+        "Customer health and usage data are accurate enough to segment at-risk accounts.",
+      mitigation: "Validate the churn model against last quarter's cohort before targeting.",
+    },
+    {
+      category: "Risk",
+      description: "Save offers and lifecycle messaging may cannibalize revenue from healthy accounts.",
+      mitigation: "Hold a control group and cap discount exposure per segment.",
+    },
+  ],
+  "Lead Generation & Conversion Optimization": [
+    {
+      category: "Risk",
+      description: "ROI and attribution tracking gaps make pipeline contribution unprovable.",
+      mitigation:
+        "Validate conversion tracking, UTM taxonomy, and CRM handoff before spend goes live.",
+    },
+    {
+      category: "Dependency",
+      description: "Sales capacity must absorb forecast MQL volume within the agreed SLA.",
+      mitigation: "Agree lead routing, SLA, and capacity ceilings with sales ops at kickoff.",
+    },
+  ],
+  "Brand Awareness & Market Expansion": [
+    {
+      category: "Assumption",
+      description:
+        "Brand positioning and localized messaging stay stable across the new target markets.",
+      mitigation: "Lock the messaging matrix at kickoff and validate localization with in-market reviewers.",
+    },
+    {
+      category: "Risk",
+      description: "Awareness outcomes are hard to attribute to revenue within the sprint window.",
+      mitigation: "Set brand-lift and share-of-voice proxies as primary KPIs up front.",
+    },
+  ],
+  "Feature Rollout & Growth Experimentation": [
+    {
+      category: "Risk",
+      description:
+        "Experiments may not reach statistical significance inside the rollout window.",
+      mitigation: "Pre-compute sample sizes and sequence tests by expected traffic volume.",
+    },
+    {
+      category: "Issue",
+      description: "Feature-flag drift and partial rollouts create inconsistent user experiences.",
+      mitigation: "Maintain a flag registry with owners and a scheduled clean-up at rollout end.",
+    },
+  ],
 };
 
 export function buildRaid(
@@ -238,20 +353,22 @@ export function buildRaid(
     ...CHANNEL_RAID[c],
   }));
 
+  GOAL_RAID[goal].forEach((item, i) =>
+    base.push({
+      id: `raid-goal-${i}`,
+      level: bump(risk === "High" ? "High" : "Medium", scale),
+      ...item,
+    }),
+  );
+
   base.push({
-    id: "raid-goal",
+    id: "raid-goal-gate",
     category: "Assumption",
     level: risk === "High" ? "High" : "Medium",
-    description:
-      goal === "Product Launch"
-        ? `Product availability and launch messaging are locked before the Week ${launchWeekIndex(weeks) + 1} go-live.`
-        : goal === "Lead Generation"
-          ? "Sales team capacity can absorb forecasted MQL volume within SLA."
-          : goal === "Retention"
-            ? "Existing customer data is accurate enough for lifecycle segmentation."
-            : `Brand guidelines remain stable throughout the ${weeks}-week sprint.`,
+    description: `Scope, owners, and success metrics for this ${weeks}-week program are locked before the Week ${launchWeekIndex(weeks) + 1} go-live.`,
     mitigation: "Confirm in the Week 1 kickoff and re-validate at each weekly stand-up.",
   });
+
 
   if (risk === "High" || weeks <= 4) {
     base.push({

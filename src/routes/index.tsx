@@ -228,7 +228,32 @@ function Index() {
             </span>
           </div>
 
+          <div className="mt-5 rounded-xl border border-border bg-secondary/50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Industry Preset
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  aria-pressed={activePreset === p.id}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-xs font-semibold transition-all",
+                    activePreset === p.id
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-card text-foreground hover:border-primary/40 hover:text-primary",
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Section title="Campaign Overview" step="01">
+
             <div className="space-y-2">
               <Label htmlFor="name">Campaign Name</Label>
               <Input

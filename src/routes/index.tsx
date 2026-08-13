@@ -39,6 +39,7 @@ import {
   buildRaid,
   buildSprint,
   CHANNELS,
+  CHANNEL_SHORT,
   dailyBurnRate,
   formatCurrency,
   formatDate,
@@ -47,6 +48,7 @@ import {
   loadBriefs,
   parseDate,
   persistBriefs,
+  PRESETS,
   RISKS,
   SPRINT_OPTIONS,
   sprintDays,
@@ -55,10 +57,12 @@ import {
   type BriefInput,
   type Channel,
   type Goal,
+  type IndustryPreset,
   type RiskLevel,
   type SavedBrief,
   type SprintWeeks,
 } from "@/lib/brief";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -88,13 +92,17 @@ function defaultDate() {
 
 const emptyInput: BriefInput = {
   name: "",
-  goal: "Product Launch",
-  channels: ["Paid Search", "Social Media"],
+  goal: "SaaS Product Launch (PLG & User Onboarding)",
+  channels: [
+    "Product-Led / In-App (Onboarding Flows, Pop-ups)",
+    "Email & Lifecycle Marketing",
+  ],
   budget: 50000,
   launchDate: defaultDate(),
   risk: "Medium",
   weeks: 6,
 };
+
 
 const levelStyles: Record<RiskLevel, string> = {
   High: "bg-destructive/10 text-destructive border-destructive/25",
@@ -107,6 +115,8 @@ function Index() {
   const [brief, setBrief] = useState<BriefInput | null>(null);
   const [done, setDone] = useState<string[]>([]);
   const [saved, setSaved] = useState<SavedBrief[]>([]);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
 
   useEffect(() => {
     setSaved(loadBriefs());
@@ -124,7 +134,22 @@ function Index() {
   const totalTasks = sprint.reduce((n, w) => n + w.tasks.length, 0);
   const progress = totalTasks ? Math.round((done.length / totalTasks) * 100) : 0;
 
+  const applyPreset = (p: IndustryPreset) => {
+    setActivePreset(p.id);
+    setForm((f) => ({
+      ...f,
+      name: f.name.trim() || p.namePlaceholder,
+      goal: p.goal,
+      channels: p.channels,
+      risk: p.risk,
+      weeks: p.weeks,
+      budget: p.budget,
+    }));
+    toast.success(`${p.label} preset applied.`);
+  };
+
   const toggleChannel = (c: Channel) =>
+
     setForm((f) => ({
       ...f,
       channels: f.channels.includes(c)
@@ -203,7 +228,32 @@ function Index() {
             </span>
           </div>
 
+          <div className="mt-5 rounded-xl border border-border bg-secondary/50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Industry Preset
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  aria-pressed={activePreset === p.id}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-xs font-semibold transition-all",
+                    activePreset === p.id
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-card text-foreground hover:border-primary/40 hover:text-primary",
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Section title="Campaign Overview" step="01">
+
             <div className="space-y-2">
               <Label htmlFor="name">Campaign Name</Label>
               <Input
@@ -251,7 +301,8 @@ function Index() {
                           : "border-border bg-secondary text-secondary-foreground hover:border-primary/40 hover:text-primary",
                       )}
                     >
-                      {c}
+                      {CHANNEL_SHORT[c]}
+
                     </button>
                   );
                 })}
@@ -410,7 +461,8 @@ function Index() {
                           key={c}
                           className="border-0 bg-primary-foreground/10 text-primary-foreground"
                         >
-                          {c}
+                          {CHANNEL_SHORT[c] ?? c}
+
                         </Badge>
                       ))}
                     </div>

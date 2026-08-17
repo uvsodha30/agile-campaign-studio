@@ -1,84 +1,56 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import {
-  CalendarDays,
-  CheckCircle2,
-  ClipboardList,
-  Copy,
-  Flame,
-  Gauge,
-  Save,
-  Sparkles,
-  Target,
-  Trash2,
-} from "lucide-react";
+import { ClipboardList, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { CampaignSetup } from "@/components/campaign/CampaignSetup";
+import { ExecutiveBrief } from "@/components/campaign/ExecutiveBrief";
+import { DeliveryPlanView } from "@/components/campaign/DeliveryPlanView";
+import { KPIPlan } from "@/components/campaign/KPIPlan";
+import { BudgetAllocationCard } from "@/components/campaign/BudgetAllocationCard";
+import { RAIDLog } from "@/components/campaign/RAIDLog";
+import { ExportMenu } from "@/components/campaign/ExportMenu";
+import { SavedCampaigns } from "@/components/campaign/SavedCampaigns";
+import type { IndustryPreset } from "@/lib/brief";
+import { buildDeliveryPlan } from "@/lib/campaign/plan";
+import { buildKpis } from "@/lib/campaign/kpi";
+import { buildBudget } from "@/lib/campaign/budget";
+import { buildRaidLog, monitoringCadence } from "@/lib/campaign/raid";
+import { computeHealth } from "@/lib/campaign/health";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-import {
-  buildRaid,
-  buildSprint,
-  CHANNELS,
-  CHANNEL_SHORT,
-  dailyBurnRate,
-  formatCurrency,
-  formatDate,
-  formatShort,
-  GOALS,
-  loadBriefs,
-  parseDate,
-  persistBriefs,
-  PRESETS,
-  RISKS,
-  SPRINT_OPTIONS,
-  sprintDays,
-  toAsanaTemplate,
-  toJiraMarkdown,
-  type BriefInput,
-  type Channel,
-  type Goal,
-  type IndustryPreset,
-  type RiskLevel,
-  type SavedBrief,
-  type SprintWeeks,
-} from "@/lib/brief";
-
+  clearWorking,
+  loadCampaigns,
+  loadWorking,
+  newId,
+  persistCampaigns,
+  persistWorking,
+} from "@/lib/campaign/storage";
+import type {
+  CampaignConfig,
+  KpiStatus,
+  RaidStatus,
+  SavedCampaign,
+} from "@/lib/campaign/types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Agile Campaign Brief Studio | Sprint Plans & RAID Logs" },
+      { title: "Agile Campaign Brief Studio | Campaign Delivery Planning" },
       {
         name: "description",
         content:
-          "Turn campaign inputs into a 4-week sprint plan, burn-rate math, and an automated RAID log you can export to Jira or Asana.",
+          "Plan campaigns, map delivery, track risk and build stakeholder-ready briefs — delivery plans, KPI targets, budget pacing and RAID logs in one client-side workspace.",
       },
       { property: "og:title", content: "Agile Campaign Brief Studio" },
       {
         property: "og:description",
         content:
-          "Generate agency-grade campaign briefs with sprint schedules, RAID logs, and Jira/Asana exports.",
+          "Campaign operations workspace: delivery plan, KPI & measurement plan, budget allocation, RAID log and stakeholder exports.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,
@@ -90,7 +62,7 @@ function defaultDate() {
   return d.toISOString().slice(0, 10);
 }
 
-const emptyInput: BriefInput = {
+const emptyConfig: CampaignConfig = {
   name: "",
   goal: "SaaS Product Launch (PLG & User Onboarding)",
   channels: [
@@ -101,126 +73,206 @@ const emptyInput: BriefInput = {
   launchDate: defaultDate(),
   risk: "Medium",
   weeks: 6,
+  presetId: null,
 };
 
-
-const levelStyles: Record<RiskLevel, string> = {
-  High: "bg-destructive/10 text-destructive border-destructive/25",
-  Medium: "bg-warning/15 text-warning-foreground border-warning/40",
-  Low: "bg-success/12 text-success border-success/30",
+type WorkingState = {
+  config: CampaignConfig;
+  generated: CampaignConfig | null;
+  done: string[];
+  kpiTargets: Record<string, string>;
+  kpiStatus: Record<string, KpiStatus>;
+  raidStatus: Record<string, RaidStatus>;
+  activeId: string | null;
 };
 
 function Index() {
-  const [form, setForm] = useState<BriefInput>(emptyInput);
-  const [brief, setBrief] = useState<BriefInput | null>(null);
+  const [config, setConfig] = useState<CampaignConfig>(emptyConfig);
+  const [generated, setGenerated] = useState<CampaignConfig | null>(null);
   const [done, setDone] = useState<string[]>([]);
-  const [saved, setSaved] = useState<SavedBrief[]>([]);
-  const [activePreset, setActivePreset] = useState<string | null>(null);
-
+  const [kpiTargets, setKpiTargets] = useState<Record<string, string>>({});
+  const [kpiStatus, setKpiStatus] = useState<Record<string, KpiStatus>>({});
+  const [raidStatus, setRaidStatus] = useState<Record<string, RaidStatus>>({});
+  const [saved, setSaved] = useState<SavedCampaign[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setSaved(loadBriefs());
+    setSaved(loadCampaigns());
+    const w = loadWorking<WorkingState>();
+    if (w?.config) {
+      setConfig(w.config);
+      setGenerated(w.generated ?? null);
+      setDone(w.done ?? []);
+      setKpiTargets(w.kpiTargets ?? {});
+      setKpiStatus(w.kpiStatus ?? {});
+      setRaidStatus(w.raidStatus ?? {});
+      setActiveId(w.activeId ?? null);
+    }
+    setHydrated(true);
   }, []);
 
-  const sprint = useMemo(
-    () => (brief ? buildSprint(brief.launchDate, brief.weeks) : []),
-    [brief],
-  );
-  const raid = useMemo(
-    () => (brief ? buildRaid(brief.channels, brief.risk, brief.goal, brief.weeks) : []),
-    [brief],
+  useEffect(() => {
+    if (!hydrated) return;
+    persistWorking({
+      config,
+      generated,
+      done,
+      kpiTargets,
+      kpiStatus,
+      raidStatus,
+      activeId,
+    } satisfies WorkingState);
+  }, [hydrated, config, generated, done, kpiTargets, kpiStatus, raidStatus, activeId]);
+
+  const plan = useMemo(() => (generated ? buildDeliveryPlan(generated) : null), [generated]);
+  const budget = useMemo(() => (generated ? buildBudget(generated) : null), [generated]);
+  const kpis = useMemo(() => {
+    if (!generated) return [];
+    return buildKpis(generated).map((k) => ({
+      ...k,
+      target: kpiTargets[k.id] ?? k.target,
+      status: kpiStatus[k.id] ?? k.status,
+    }));
+  }, [generated, kpiTargets, kpiStatus]);
+  const raid = useMemo(() => {
+    if (!generated) return [];
+    return buildRaidLog(generated).map((r) => ({ ...r, status: raidStatus[r.id] ?? r.status }));
+  }, [generated, raidStatus]);
+  const health = useMemo(
+    () => (plan ? computeHealth(plan, raid, done) : null),
+    [plan, raid, done],
   );
 
-  const totalTasks = sprint.reduce((n, w) => n + w.tasks.length, 0);
-  const progress = totalTasks ? Math.round((done.length / totalTasks) * 100) : 0;
+  const dirty =
+    !!generated && JSON.stringify(config) !== JSON.stringify(generated) ? true : !!generated;
+
+  const patch = (p: Partial<CampaignConfig>) => setConfig((c) => ({ ...c, ...p, ...(p.presetId === undefined && ("goal" in p || "channels" in p || "weeks" in p || "risk" in p) ? {} : {}) }));
 
   const applyPreset = (p: IndustryPreset) => {
-    setActivePreset(p.id);
-    setForm((f) => ({
-      ...f,
-      name: f.name.trim() || p.namePlaceholder,
+    const overridden =
+      generated &&
+      (generated.goal !== config.goal ||
+        JSON.stringify(generated.channels) !== JSON.stringify(config.channels) ||
+        generated.weeks !== config.weeks);
+    if (
+      overridden &&
+      !window.confirm("Applying a preset will replace your manual edits. Continue?")
+    ) {
+      return;
+    }
+    setConfig((c) => ({
+      ...c,
+      name: c.name.trim() || p.namePlaceholder,
       goal: p.goal,
       channels: p.channels,
       risk: p.risk,
       weeks: p.weeks,
       budget: p.budget,
+      presetId: p.id,
     }));
-    toast.success(`${p.label} preset applied.`);
+    toast.success(`${p.label} scenario applied.`);
   };
 
-  const toggleChannel = (c: Channel) =>
-
-    setForm((f) => ({
-      ...f,
-      channels: f.channels.includes(c)
-        ? f.channels.filter((x) => x !== c)
-        : [...f.channels, c],
-    }));
-
   const generate = () => {
-    if (!form.name.trim()) {
+    if (!config.name.trim()) {
       toast.error("Add a campaign name first.");
       return;
     }
-    if (form.channels.length === 0) {
+    if (config.channels.length === 0) {
       toast.error("Select at least one channel.");
       return;
     }
-    setBrief({ ...form, name: form.name.trim() });
+    const next = { ...config, name: config.name.trim() };
+    setConfig(next);
+    setGenerated(next);
     setDone([]);
-    toast.success("Campaign brief generated.");
+    setKpiTargets({});
+    setKpiStatus({});
+    setRaidStatus({});
+    toast.success("Campaign delivery plan generated.");
   };
 
-
-  const copy = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(`${label} copied to clipboard.`);
-    } catch {
-      toast.error("Clipboard unavailable in this browser.");
-    }
+  const newCampaign = () => {
+    if (dirty && !window.confirm("Start a new campaign? Unsaved changes will be lost.")) return;
+    setConfig({ ...emptyConfig, launchDate: defaultDate() });
+    setGenerated(null);
+    setDone([]);
+    setKpiTargets({});
+    setKpiStatus({});
+    setRaidStatus({});
+    setActiveId(null);
+    clearWorking();
+    toast.success("New campaign started.");
   };
 
-  const saveBrief = () => {
-    if (!brief) return;
-    const entry: SavedBrief = {
-      id: `${Date.now()}`,
+  const persist = (list: SavedCampaign[]) => {
+    setSaved(list);
+    persistCampaigns(list);
+  };
+
+  const saveCampaign = () => {
+    if (!generated) return;
+    const existing = saved.find((s) => s.id === activeId);
+    const entry: SavedCampaign = {
+      id: existing?.id ?? newId(),
       savedAt: new Date().toISOString(),
-      input: brief,
+      label: existing?.label ?? generated.name,
+      config: generated,
       done,
+      kpiTargets,
+      kpiStatus,
+      raidStatus,
     };
-    const next = [entry, ...saved].slice(0, 12);
-    setSaved(next);
-    persistBriefs(next);
-    toast.success("Brief saved to this browser.");
+    persist([entry, ...saved.filter((s) => s.id !== entry.id)]);
+    setActiveId(entry.id);
+    toast.success(existing ? "Campaign updated." : "Campaign saved to this browser.");
   };
 
-  const restore = (entry: SavedBrief) => {
-    setForm(entry.input);
-    setBrief(entry.input);
-    setDone(entry.done);
-    toast.success(`Loaded "${entry.input.name}".`);
+  const loadCampaign = (c: SavedCampaign) => {
+    setConfig(c.config);
+    setGenerated(c.config);
+    setDone(c.done ?? []);
+    setKpiTargets(c.kpiTargets ?? {});
+    setKpiStatus(c.kpiStatus ?? {});
+    setRaidStatus(c.raidStatus ?? {});
+    setActiveId(c.id);
+    toast.success(`Loaded "${c.label}".`);
   };
 
-  const remove = (id: string) => {
-    const next = saved.filter((s) => s.id !== id);
-    setSaved(next);
-    persistBriefs(next);
+  const renameCampaign = (c: SavedCampaign) => {
+    const label = window.prompt("Rename campaign", c.label);
+    if (!label?.trim()) return;
+    persist(saved.map((s) => (s.id === c.id ? { ...s, label: label.trim() } : s)));
+  };
+
+  const duplicateCampaign = (c: SavedCampaign) => {
+    persist([
+      { ...c, id: newId(), label: `${c.label} (copy)`, savedAt: new Date().toISOString() },
+      ...saved,
+    ]);
+    toast.success("Campaign duplicated.");
+  };
+
+  const deleteCampaign = (c: SavedCampaign) => {
+    if (!window.confirm(`Delete "${c.label}"?`)) return;
+    persist(saved.filter((s) => s.id !== c.id));
+    if (activeId === c.id) setActiveId(null);
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Toaster />
       <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
-        {/* LEFT PANEL */}
-        <aside className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-panel)] lg:sticky lg:top-6">
+        <aside className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-panel)] lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="min-w-0">
               <h1 className="truncate text-lg font-semibold tracking-tight">
                 Agile Campaign Brief Studio
               </h1>
-              <p className="text-xs text-muted-foreground">
-                Inputs in, sprint-ready brief out.
+              <p className="text-xs text-muted-foreground">Inputs in, sprint-ready brief out.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Plan campaigns, map delivery, track risk, and build stakeholder-ready briefs.
               </p>
             </div>
             <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -228,459 +280,77 @@ function Index() {
             </span>
           </div>
 
-          <div className="mt-5 rounded-xl border border-border bg-secondary/50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Industry Preset
-            </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {PRESETS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => applyPreset(p)}
-                  aria-pressed={activePreset === p.id}
-                  className={cn(
-                    "rounded-lg border px-3 py-2 text-xs font-semibold transition-all",
-                    activePreset === p.id
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-border bg-card text-foreground hover:border-primary/40 hover:text-primary",
-                  )}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <Section title="Campaign Overview" step="01">
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Campaign Name</Label>
-              <Input
-                id="name"
-                placeholder="Q3 Horizon Launch"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Strategic Goal</Label>
-              <Select
-                value={form.goal}
-                onValueChange={(v) => setForm({ ...form, goal: v as Goal })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {GOALS.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {g}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Target Channels</Label>
-              <div className="flex flex-wrap gap-2">
-                {CHANNELS.map((c) => {
-                  const active = form.channels.includes(c);
-                  return (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => toggleChannel(c)}
-                      aria-pressed={active}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
-                        active
-                          ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                          : "border-border bg-secondary text-secondary-foreground hover:border-primary/40 hover:text-primary",
-                      )}
-                    >
-                      {CHANNEL_SHORT[c]}
-
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </Section>
-
-          <Section title="Constraints & Parameters" step="02">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="budget">Total Budget (USD)</Label>
-                <Input
-                  id="budget"
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={form.budget}
-                  onChange={(e) => setForm({ ...form, budget: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="date">Target Launch Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={form.launchDate}
-                  onChange={(e) => setForm({ ...form, launchDate: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Sprint Duration</Label>
-              <Select
-                value={String(form.weeks)}
-                onValueChange={(v) =>
-                  setForm({ ...form, weeks: Number(v) as SprintWeeks })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SPRINT_OPTIONS.map((o) => (
-                    <SelectItem key={o.weeks} value={String(o.weeks)}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Risk Sensitivity Level</Label>
-              <div className="grid grid-cols-3 gap-2 rounded-xl bg-secondary p-1">
-                {RISKS.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setForm({ ...form, risk: r })}
-                    className={cn(
-                      "rounded-lg px-3 py-2 text-xs font-semibold transition-all",
-                      form.risk === r
-                        ? "bg-card text-primary shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Section>
-
-          <Button className="mt-6 w-full" size="lg" onClick={generate}>
-            Generate Campaign Brief &amp; Sprint Plan
+          <Button variant="outline" size="sm" className="mt-4 w-full" onClick={newCampaign}>
+            <Plus className="mr-1 size-4" /> New Campaign
           </Button>
 
-          {saved.length > 0 && (
-            <div className="mt-6 border-t border-border pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Saved briefs
-              </p>
-              <ul className="mt-2 space-y-2">
-                {saved.map((s) => (
-                  <li
-                    key={s.id}
-                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-border bg-secondary/60 px-3 py-2"
-                  >
-                    <button
-                      onClick={() => restore(s)}
-                      className="min-w-0 text-left"
-                      type="button"
-                    >
-                      <span className="block truncate text-sm font-medium">
-                        {s.input.name}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {s.input.goal} · {formatCurrency(s.input.budget)}
-                      </span>
-                    </button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Delete ${s.input.name}`}
-                      onClick={() => remove(s.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div className="mt-4">
+            <CampaignSetup
+              config={config}
+              onChange={patch}
+              onPreset={applyPreset}
+              onGenerate={generate}
+            />
+          </div>
+
+          <SavedCampaigns
+            campaigns={saved}
+            activeId={activeId}
+            onLoad={loadCampaign}
+            onRename={renameCampaign}
+            onDuplicate={duplicateCampaign}
+            onDelete={deleteCampaign}
+          />
         </aside>
 
-        {/* RIGHT PANEL */}
         <main className="min-w-0 space-y-5">
-          {!brief ? (
+          {!generated || !plan || !budget || !health ? (
             <div className="grid min-h-[60vh] place-items-center rounded-2xl border border-dashed border-border bg-card/60 p-10 text-center">
               <div className="max-w-sm">
                 <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent text-accent-foreground">
                   <ClipboardList className="size-6" />
                 </span>
-                <h2 className="mt-4 text-lg font-semibold">No brief yet</h2>
+                <h2 className="mt-4 text-lg font-semibold">No campaign plan yet</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Fill in the campaign details and generate a 4-week sprint plan with an
-                  automated RAID log.
+                  Pick a preset or fill in the campaign details to generate a delivery plan, KPI
+                  plan, budget allocation and RAID log.
                 </p>
               </div>
             </div>
           ) : (
             <>
-              <header
-                className="rounded-2xl p-6 text-primary-foreground shadow-[var(--shadow-panel)]"
-                style={{ background: "var(--gradient-hero)" }}
-              >
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs uppercase tracking-[0.2em] opacity-75">
-                      Executive Brief
-                    </p>
-                    <h2 className="truncate text-2xl font-bold sm:text-3xl">{brief.name}</h2>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge className="border-0 bg-primary-foreground/15 text-primary-foreground">
-                        <Target className="mr-1 size-3" /> {brief.goal}
-                      </Badge>
-                      <Badge className="border-0 bg-primary-foreground/15 text-primary-foreground">
-                        Risk: {brief.risk}
-                      </Badge>
-                      <Badge className="border-0 bg-primary-foreground/15 text-primary-foreground">
-                        {brief.weeks}-week sprint
-                      </Badge>
-                      {brief.channels.map((c) => (
-                        <Badge
-                          key={c}
-                          className="border-0 bg-primary-foreground/10 text-primary-foreground"
-                        >
-                          {CHANNEL_SHORT[c] ?? c}
-
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="shrink-0 rounded-xl bg-primary-foreground/12 px-4 py-3 text-right">
-                    <p className="flex items-center justify-end gap-1 text-xs opacity-80">
-                      <Flame className="size-3" /> Daily burn rate
-                    </p>
-                    <p className="text-2xl font-bold tabular-nums">
-                      {formatCurrency(dailyBurnRate(brief.budget, brief.weeks))}
-                    </p>
-                    <p className="text-xs opacity-75">
-                      {formatCurrency(brief.budget)} over {sprintDays(brief.weeks)} days
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <Stat
-                    icon={<CalendarDays className="size-3.5" />}
-                    label="Launch date"
-                    value={formatDate(parseDate(brief.launchDate))}
-                  />
-                  <Stat
-                    icon={<Gauge className="size-3.5" />}
-                    label="Sprint window"
-                    value={`${formatShort(sprint[0]!.start)} – ${formatShort(sprint[sprint.length - 1]!.end)}`}
-                  />
-                  <Stat
-                    icon={<CheckCircle2 className="size-3.5" />}
-                    label="Plan progress"
-                    value={`${progress}% · ${done.length}/${totalTasks} tasks`}
-                  />
-                </div>
-                <Progress value={progress} className="mt-4 h-1.5 bg-primary-foreground/20" />
-              </header>
-
-              <section className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-panel)]">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  {brief.weeks}-Week Sprint Schedule
-                </h3>
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  {sprint.map((w, i) => {
-                    const weekDone = w.tasks.filter((t) => done.includes(`${w.id}:${t}`)).length;
-                    return (
-                      <div
-                        key={w.id}
-                        className="rounded-xl border border-border bg-secondary/40 p-4 transition-colors hover:border-primary/40"
-                      >
-                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">
-                              {w.title} · {w.phase}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatShort(w.start)} – {formatShort(w.end)}
-                            </p>
-                          </div>
-                          <span
-                            className={cn(
-                              "shrink-0 rounded-full px-2 py-1 text-xs font-semibold",
-                              weekDone === w.tasks.length
-                                ? "bg-success/15 text-success"
-                                : "bg-primary/10 text-primary",
-                            )}
-                          >
-                            {weekDone}/{w.tasks.length}
-                          </span>
-                        </div>
-                        <ul className="mt-3 space-y-2">
-                          {w.tasks.map((t) => {
-                            const key = `${w.id}:${t}`;
-                            const checked = done.includes(key);
-                            return (
-                              <li key={key} className="flex items-start gap-2">
-                                <Checkbox
-                                  id={key}
-                                  checked={checked}
-                                  onCheckedChange={(v) =>
-                                    setDone((d) =>
-                                      v ? [...d, key] : d.filter((x) => x !== key),
-                                    )
-                                  }
-                                  className="mt-0.5 shrink-0"
-                                />
-                                <label
-                                  htmlFor={key}
-                                  className={cn(
-                                    "min-w-0 cursor-pointer text-sm leading-snug",
-                                    checked && "text-muted-foreground line-through",
-                                  )}
-                                >
-                                  {t}
-                                </label>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        {w.phase === "Media Launch" && i === sprint.findIndex((x) => x.phase === "Media Launch") && (
-                          <p className="mt-3 text-xs text-muted-foreground">
-                            Go-live week — burn rate applies from{" "}
-                            {formatShort(parseDate(brief.launchDate))}.
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-panel)]">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  Automated RAID Log
-                </h3>
-                <ul className="mt-4 space-y-3">
-                  {raid.map((r) => (
-                    <li key={r.id} className="rounded-xl border border-border p-4">
-                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                        <p className="min-w-0 text-sm font-medium leading-snug">
-                          {r.description}
-                        </p>
-                        <div className="flex shrink-0 gap-2">
-                          <Badge variant="outline" className="border-border text-muted-foreground">
-                            {r.category}
-                          </Badge>
-                          <Badge variant="outline" className={levelStyles[r.level]}>
-                            {r.level}
-                          </Badge>
-                        </div>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        <span className="font-semibold text-foreground">Mitigation: </span>
-                        {r.mitigation}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-panel)]">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                      <Copy className="mr-2 size-4" /> Export brief
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem
-                      onClick={() =>
-                        copy(toJiraMarkdown(brief, sprint, raid), "Jira markdown")
-                      }
-                    >
-                      Copy as Jira Markdown
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        copy(toAsanaTemplate(brief, sprint, raid), "Asana template")
-                      }
-                    >
-                      Copy as Asana Template
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button onClick={saveBrief}>
-                  <Save className="mr-2 size-4" /> Save Brief
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Saved briefs stay in this browser — no account needed.
-                </p>
-              </section>
+              <ExecutiveBrief
+                config={generated}
+                plan={plan}
+                budget={budget}
+                health={health}
+              />
+              <DeliveryPlanView
+                plan={plan}
+                done={done}
+                onToggle={(id, next) =>
+                  setDone((d) => (next ? [...new Set([...d, id])] : d.filter((x) => x !== id)))
+                }
+              />
+              <KPIPlan
+                kpis={kpis}
+                onTargetChange={(id, value) => setKpiTargets((t) => ({ ...t, [id]: value }))}
+                onStatusChange={(id, status) => setKpiStatus((s) => ({ ...s, [id]: status }))}
+              />
+              <BudgetAllocationCard budget={budget} />
+              <RAIDLog
+                items={raid}
+                cadence={monitoringCadence(generated)}
+                onStatusChange={(id, status) => setRaidStatus((s) => ({ ...s, [id]: status }))}
+              />
+              <ExportMenu
+                payload={{ config: generated, plan, kpis, budget, raid, health, done }}
+                onSave={saveCampaign}
+              />
             </>
           )}
         </main>
       </div>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  step,
-  children,
-}: {
-  title: string;
-  step: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mt-6 space-y-4 border-t border-border pt-5">
-      <div className="flex items-center gap-2">
-        <span className="rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
-          {step}
-        </span>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </h2>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Stat({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-xl bg-primary-foreground/10 px-3 py-2">
-      <p className="flex items-center gap-1 text-xs opacity-80">
-        {icon}
-        {label}
-      </p>
-      <p className="truncate text-sm font-semibold">{value}</p>
     </div>
   );
 }

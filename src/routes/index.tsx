@@ -144,10 +144,9 @@ function Index() {
     [plan, raid, done],
   );
 
-  const dirty =
-    !!generated && JSON.stringify(config) !== JSON.stringify(generated) ? true : !!generated;
+  const dirty = !!generated || config.name.trim().length > 0;
 
-  const patch = (p: Partial<CampaignConfig>) => setConfig((c) => ({ ...c, ...p, ...(p.presetId === undefined && ("goal" in p || "channels" in p || "weeks" in p || "risk" in p) ? {} : {}) }));
+  const patch = (p: Partial<CampaignConfig>) => setConfig((c) => ({ ...c, ...p }));
 
   const applyPreset = (p: IndustryPreset) => {
     const overridden =

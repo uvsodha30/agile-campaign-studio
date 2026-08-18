@@ -60,7 +60,8 @@ export function buildDeliveryPlan(config: CampaignConfig): DeliveryPlan {
     phase.weeks.push(weeks[i]!);
   });
   phases.forEach((p, i) => {
-    p.order = String(i + 1).padStart(2, "0");
+    p.order = `S${i + 1}`;
+    p.name = `Sprint ${i + 1} — ${p.name}`;
   });
 
   return {

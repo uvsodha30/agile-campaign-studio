@@ -43,7 +43,7 @@ export function toMarkdown(p: ExportPayload) {
   summaryRows(p).forEach(([k, v]) => L.push(`- **${k}:** ${v}`));
   L.push("", `## ${p.plan.label}`, "");
   p.plan.phases.forEach((ph) => {
-    L.push(`### ${ph.order} — ${ph.name}`);
+    L.push(`### ${ph.name}`);
     ph.weeks.forEach((w) => {
       L.push("", `**${w.title}** (${formatShort(w.start)} – ${formatShort(w.end)})`);
       w.tasks.forEach((t) => L.push(`- [${done.has(t.id) ? "x" : " "}] ${t.label}`));
@@ -83,7 +83,7 @@ export function toJira(p: ExportPayload) {
   summaryRows(p).forEach(([k, v]) => L.push(`*${k}:* ${v}`));
   L.push("", `h2. ${p.plan.label}`);
   p.plan.phases.forEach((ph) => {
-    L.push(`h3. ${ph.order} — ${ph.name}`);
+    L.push(`h3. ${ph.name}`);
     ph.weeks.forEach((w) => {
       L.push(`h4. ${w.title} (${formatShort(w.start)} – ${formatShort(w.end)})`);
       w.tasks.forEach((t) => L.push(`* ${done.has(t.id) ? "(/)" : "( )"} ${t.label}`));
@@ -115,7 +115,7 @@ export function toAsana(p: ExportPayload) {
   L.push("");
   p.plan.phases.forEach((ph) => {
     ph.weeks.forEach((w) => {
-      L.push(`Section: ${ph.order} ${ph.name} · ${w.title} (due ${formatDate(w.end)})`);
+      L.push(`Section: ${ph.name} · ${w.title} (due ${formatDate(w.end)})`);
       w.tasks.forEach((t) =>
         L.push(`  Task: ${t.label} [due ${formatDate(w.end)}]${done.has(t.id) ? " [completed]" : ""}`),
       );
@@ -148,7 +148,7 @@ export function printPdf(p: ExportPayload) {
 
   const plan = p.plan.phases
     .map(
-      (ph) => `<h3>${ph.order} — ${esc(ph.name)}</h3>` +
+      (ph) => `<h3>${esc(ph.name)}</h3>` +
         ph.weeks
           .map(
             (w) =>

@@ -1,6 +1,6 @@
 import { addDays, parseDate, type SprintWeeks } from "@/lib/brief";
+import { budgetRules, extraTasksFor } from "./config";
 import {
-  CHANNEL_TASKS,
   LAUNCH_BLUEPRINT_INDEX,
   PHASE_NAMES,
   TASK_LIBRARIES,

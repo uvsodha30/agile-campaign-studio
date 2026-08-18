@@ -20,6 +20,12 @@ function paidBudget(config: CampaignConfig) {
 const GOAL_KPIS: Record<Goal, Def[]> = {
   "Lead Generation & Conversion Optimization": [
     {
+      id: "leads",
+      name: "Leads",
+      source: "CRM + Web Analytics",
+      target: (c) => `${round((paidBudget(c) / 55) * riskFactor(c))}`,
+    },
+    {
       id: "mql",
       name: "MQLs",
       source: "CRM",

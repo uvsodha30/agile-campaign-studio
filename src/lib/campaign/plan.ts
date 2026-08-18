@@ -22,14 +22,17 @@ export function buildDeliveryPlan(config: CampaignConfig): DeliveryPlan {
   const launch = parseDate(config.launchDate);
   const planStart = addDays(launch, -launchPos * 7);
 
+  const maxTasks = budgetRules.maxTasksPerWeek(config);
+
   const weeks: CampaignWeek[] = selection.map((blueprintIndex, i) => {
     const bp = library[blueprintIndex]!;
-    const extras = config.channels
-      .map((c) => CHANNEL_TASKS[c]?.[bp.key])
-      .filter((t): t is string => Boolean(t));
+    const extras = extraTasksFor(config, bp.key);
 
     const labels = [...bp.tasks];
-    for (const extra of extras) if (!labels.includes(extra)) labels.push(extra);
+    for (const extra of extras) {
+      if (labels.length >= maxTasks) break;
+      if (!labels.includes(extra)) labels.push(extra);
+    }
 
     return {
       id: `w${i + 1}-${bp.key}`,

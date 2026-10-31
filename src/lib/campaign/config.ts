@@ -93,6 +93,14 @@ export const goalConfigs: Record<Goal, { emphasis: WeekTasks }> = {
       review: ["Schedule 3-month career-outcome follow-up"],
     },
   },
+  "AI Product Launch (Evals & Responsible Rollout)": {
+    emphasis: {
+      research: ["Document intended and prohibited uses"],
+      qa: ["Confirm eval results meet release thresholds"],
+      launch: ["Track flagged-output rate against guardrails"],
+      review: ["Feed safety learnings into the eval backlog"],
+    },
+  },
 };
 
 /** Combination rules: goal + channel mixes that unlock specific work. */
@@ -168,6 +176,22 @@ export const comboRules: ComboRule[] = [
     tasks: {
       production: ["Send application reminders through organizers and email"],
       "early-opt": ["Share next-step opportunities with alumni and referrers"],
+    },
+  },
+  {
+    id: "ailaunch-plg",
+    goal: "AI Product Launch (Evals & Responsible Rollout)",
+    channels: [PLG],
+    tasks: {
+      "creative-dev": ["Design in-product AI disclosure and feedback controls"],
+    },
+  },
+  {
+    id: "ailaunch-devdocs",
+    goal: "AI Product Launch (Evals & Responsible Rollout)",
+    channels: [DEVDOCS],
+    tasks: {
+      production: ["Publish usage policy and model limitations in API docs"],
     },
   },
   {

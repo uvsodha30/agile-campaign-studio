@@ -23,6 +23,7 @@ const BASE: Record<ScenarioId, Record<CatId, number>> = {
   ecom: { paid: 55, creative: 20, martech: 12, events: 3 },
   it: { paid: 10, creative: 18, martech: 45, events: 17 },
   program: { paid: 5, creative: 12, martech: 10, events: 60 },
+  ailaunch: { paid: 8, creative: 12, martech: 55, events: 8 },
 };
 
 const CHANNEL_WEIGHTS: Record<Channel, Partial<Record<CatId, number>>> = {

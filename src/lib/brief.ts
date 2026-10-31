@@ -5,7 +5,8 @@ export type Goal =
   | "Lead Generation & Conversion Optimization"
   | "Brand Awareness & Market Expansion"
   | "Feature Rollout & Growth Experimentation"
-  | "Talent Program & Workshop Delivery";
+  | "Talent Program & Workshop Delivery"
+  | "AI Product Launch (Evals & Responsible Rollout)";
 
 export type Channel =
   | "Digital Ad Networks (Paid Search, Social, Display)"
@@ -26,6 +27,7 @@ export const GOALS: Goal[] = [
   "Brand Awareness & Market Expansion",
   "Feature Rollout & Growth Experimentation",
   "Talent Program & Workshop Delivery",
+  "AI Product Launch (Evals & Responsible Rollout)",
 ];
 export const CHANNELS: Channel[] = [
   "Digital Ad Networks (Paid Search, Social, Display)",
@@ -358,6 +360,19 @@ const GOAL_RAID: Record<Goal, Omit<RaidItem, "id" | "level">[]> = {
       mitigation: "Schedule 3-month follow-up surveys at selection and agree what counts as an outcome.",
     },
   ],
+  "AI Product Launch (Evals & Responsible Rollout)": [
+    {
+      category: "Risk",
+      description:
+        "The model may produce harmful, biased or inaccurate outputs that pre-launch evals did not catch.",
+      mitigation: "Gate launch on eval thresholds, add output filters and review flagged outputs daily.",
+    },
+    {
+      category: "Dependency",
+      description: "Third-party model or API changes can shift behaviour without notice.",
+      mitigation: "Pin model versions and re-run the eval suite before every upgrade.",
+    },
+  ],
 };
 
 export function buildRaid(
@@ -572,8 +587,21 @@ export const PRESETS: IndustryPreset[] = [
     namePlaceholder: "Market Expansion Sprint",
   },
   {
+    id: "ailaunch",
+    label: "AI Product Launch",
+    goal: "AI Product Launch (Evals & Responsible Rollout)",
+    channels: [
+      "Product-Led / In-App (Onboarding Flows, Pop-ups)",
+      "Developer / Tech Docs & API Portals",
+    ],
+    risk: "High",
+    weeks: 12,
+    budget: 150000,
+    namePlaceholder: "Responsible AI Assistant Launch",
+  },
+  {
     id: "aisafety",
-    label: "AI Safety Workshop",
+    label: "AI Safety",
     goal: "Talent Program & Workshop Delivery",
     channels: [
       "Community & Partner Outreach (University Groups, Referrals)",

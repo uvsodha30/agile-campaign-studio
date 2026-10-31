@@ -1,0 +1,38 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run test
+
+      - run: bun run build
+        env:
+          NITRO_PRESET: cloudflare-pages
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 9a32c4d696850fa78cfa03eaff9f82be
+          wranglerVersion: "4.156.0"
+          command: pages deploy dist --project-name agile-campaign-studio --branch main

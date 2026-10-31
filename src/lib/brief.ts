@@ -4,7 +4,9 @@ export type Goal =
   | "Customer Retention & Churn Reduction"
   | "Lead Generation & Conversion Optimization"
   | "Brand Awareness & Market Expansion"
-  | "Feature Rollout & Growth Experimentation";
+  | "Feature Rollout & Growth Experimentation"
+  | "Talent Program & Workshop Delivery"
+  | "AI Product Launch (Evals & Responsible Rollout)";
 
 export type Channel =
   | "Digital Ad Networks (Paid Search, Social, Display)"
@@ -12,7 +14,8 @@ export type Channel =
   | "Email & Lifecycle Marketing"
   | "Content & SEO Strategy"
   | "Developer / Tech Docs & API Portals"
-  | "Outbound Sales Enablement & Events";
+  | "Outbound Sales Enablement & Events"
+  | "Community & Partner Outreach (University Groups, Referrals)";
 
 export type RiskLevel = "Low" | "Medium" | "High";
 
@@ -23,6 +26,8 @@ export const GOALS: Goal[] = [
   "Lead Generation & Conversion Optimization",
   "Brand Awareness & Market Expansion",
   "Feature Rollout & Growth Experimentation",
+  "Talent Program & Workshop Delivery",
+  "AI Product Launch (Evals & Responsible Rollout)",
 ];
 export const CHANNELS: Channel[] = [
   "Digital Ad Networks (Paid Search, Social, Display)",
@@ -31,6 +36,7 @@ export const CHANNELS: Channel[] = [
   "Content & SEO Strategy",
   "Developer / Tech Docs & API Portals",
   "Outbound Sales Enablement & Events",
+  "Community & Partner Outreach (University Groups, Referrals)",
 ];
 export const RISKS: RiskLevel[] = ["Low", "Medium", "High"];
 
@@ -42,6 +48,7 @@ export const CHANNEL_SHORT: Record<Channel, string> = {
   "Content & SEO Strategy": "Content & SEO",
   "Developer / Tech Docs & API Portals": "Dev Docs & API",
   "Outbound Sales Enablement & Events": "Sales & Events",
+  "Community & Partner Outreach (University Groups, Referrals)": "Community Outreach",
 };
 
 
@@ -240,6 +247,13 @@ const CHANNEL_RAID: Record<Channel, Omit<RaidItem, "id" | "level">> = {
     mitigation:
       "Lock enablement sessions two weeks out and confirm SLA-backed lead routing with sales ops.",
   },
+  "Community & Partner Outreach (University Groups, Referrals)": {
+    category: "Dependency",
+    description:
+      "Application volume depends on group organizers and referrers sharing the call on time.",
+    mitigation:
+      "Brief organizers with a ready-to-share outreach kit two weeks before applications open.",
+  },
 };
 
 /** Goal-specific RAID items spanning IT, SaaS, product, and marketing programs. */
@@ -331,6 +345,32 @@ const GOAL_RAID: Record<Goal, Omit<RaidItem, "id" | "level">[]> = {
       category: "Issue",
       description: "Feature-flag drift and partial rollouts create inconsistent user experiences.",
       mitigation: "Maintain a flag registry with owners and a scheduled clean-up at rollout end.",
+    },
+  ],
+  "Talent Program & Workshop Delivery": [
+    {
+      category: "Risk",
+      description:
+        "The applicant pool may not include enough participants who match the target profile.",
+      mitigation: "Track qualified applications weekly and widen outreach before the deadline.",
+    },
+    {
+      category: "Assumption",
+      description: "Post-program career outcomes can be measured within the follow-up window.",
+      mitigation: "Schedule 3-month follow-up surveys at selection and agree what counts as an outcome.",
+    },
+  ],
+  "AI Product Launch (Evals & Responsible Rollout)": [
+    {
+      category: "Risk",
+      description:
+        "The model may produce harmful, biased or inaccurate outputs that pre-launch evals did not catch.",
+      mitigation: "Gate launch on eval thresholds, add output filters and review flagged outputs daily.",
+    },
+    {
+      category: "Dependency",
+      description: "Third-party model or API changes can shift behaviour without notice.",
+      mitigation: "Pin model versions and re-run the eval suite before every upgrade.",
     },
   ],
 };
@@ -545,5 +585,31 @@ export const PRESETS: IndustryPreset[] = [
     weeks: 4,
     budget: 45000,
     namePlaceholder: "Market Expansion Sprint",
+  },
+  {
+    id: "ailaunch",
+    label: "AI Product Launch",
+    goal: "AI Product Launch (Evals & Responsible Rollout)",
+    channels: [
+      "Product-Led / In-App (Onboarding Flows, Pop-ups)",
+      "Developer / Tech Docs & API Portals",
+    ],
+    risk: "High",
+    weeks: 12,
+    budget: 150000,
+    namePlaceholder: "Responsible AI Assistant Launch",
+  },
+  {
+    id: "aisafety",
+    label: "AI Safety",
+    goal: "Talent Program & Workshop Delivery",
+    channels: [
+      "Community & Partner Outreach (University Groups, Referrals)",
+      "Email & Lifecycle Marketing",
+    ],
+    risk: "Medium",
+    weeks: 12,
+    budget: 80000,
+    namePlaceholder: "Residential AI Safety Workshop",
   },
 ];

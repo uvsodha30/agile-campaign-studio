@@ -85,6 +85,22 @@ export const goalConfigs: Record<Goal, { emphasis: WeekTasks }> = {
       optimization: ["Ship winning variants and retire losing flags"],
     },
   },
+  "Talent Program & Workshop Delivery": {
+    emphasis: {
+      research: ["Agree counterfactual impact measures with leadership"],
+      production: ["Track qualified applications against target profile"],
+      launch: ["Collect real-time session feedback"],
+      review: ["Schedule 3-month career-outcome follow-up"],
+    },
+  },
+  "AI Product Launch (Evals & Responsible Rollout)": {
+    emphasis: {
+      research: ["Document intended and prohibited uses"],
+      qa: ["Confirm eval results meet release thresholds"],
+      launch: ["Track flagged-output rate against guardrails"],
+      review: ["Feed safety learnings into the eval backlog"],
+    },
+  },
 };
 
 /** Combination rules: goal + channel mixes that unlock specific work. */
@@ -101,6 +117,7 @@ const SEO: Channel = "Content & SEO Strategy";
 const PLG: Channel = "Product-Led / In-App (Onboarding Flows, Pop-ups)";
 const DEVDOCS: Channel = "Developer / Tech Docs & API Portals";
 const SALES: Channel = "Outbound Sales Enablement & Events";
+const COMMUNITY: Channel = "Community & Partner Outreach (University Groups, Referrals)";
 
 export const comboRules: ComboRule[] = [
   {
@@ -150,6 +167,31 @@ export const comboRules: ComboRule[] = [
     tasks: {
       production: ["Build in-app and email save-offer flows"],
       optimization: ["Test save-offer timing across both channels"],
+    },
+  },
+  {
+    id: "program-community-email",
+    goal: "Talent Program & Workshop Delivery",
+    channels: [COMMUNITY, EMAIL],
+    tasks: {
+      production: ["Send application reminders through organizers and email"],
+      "early-opt": ["Share next-step opportunities with alumni and referrers"],
+    },
+  },
+  {
+    id: "ailaunch-plg",
+    goal: "AI Product Launch (Evals & Responsible Rollout)",
+    channels: [PLG],
+    tasks: {
+      "creative-dev": ["Design in-product AI disclosure and feedback controls"],
+    },
+  },
+  {
+    id: "ailaunch-devdocs",
+    goal: "AI Product Launch (Evals & Responsible Rollout)",
+    channels: [DEVDOCS],
+    tasks: {
+      production: ["Publish usage policy and model limitations in API docs"],
     },
   },
   {

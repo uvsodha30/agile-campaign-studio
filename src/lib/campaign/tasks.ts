@@ -18,6 +18,26 @@ export const PHASE_NAMES = [
   "Optimization & Reporting",
 ] as const;
 
+/** Scenario-specific phase names where the campaign defaults don't fit. */
+export const SCENARIO_PHASE_NAMES: Partial<Record<ScenarioId, readonly string[]>> = {
+  program: [
+    "Discovery & Program Design",
+    "Architecture & Outreach",
+    "Applications & Logistics",
+    "Dry Run & Readiness",
+    "Delivery & Follow-Up",
+    "Career Support & Impact Review",
+  ],
+  ailaunch: [
+    "Discovery & Risk Assessment",
+    "Eval & Safeguard Design",
+    "Build & Red-Teaming",
+    "Safety Review & Go/No-Go",
+    "Staged Rollout & Monitoring",
+    "Scale & Post-Launch Review",
+  ],
+};
+
 /** Blueprint index -> phase index (pairs of weeks). */
 export function phaseIndexFor(blueprintIndex: number) {
   return Math.min(Math.floor(blueprintIndex / 2), PHASE_NAMES.length - 1);
@@ -549,11 +569,270 @@ const it: WeekBlueprint[] = [
   },
 ];
 
+const program: WeekBlueprint[] = [
+  {
+    key: "kickoff",
+    title: "Program Kickoff",
+    tasks: [
+      "Kickoff with program lead and decision owners",
+      "Define theory of change and target participant profile",
+      "Confirm success criteria and impact measures",
+      "Identify facilitators, mentors and partner orgs",
+    ],
+  },
+  {
+    key: "research",
+    title: "Participant & Content Design",
+    tasks: [
+      "Map target talent pools (AI safety, biosecurity, policy)",
+      "Interview past participants and facilitators",
+      "Draft curriculum and session arc",
+      "Define follow-up survey plan",
+    ],
+  },
+  {
+    key: "architecture",
+    title: "Program Architecture",
+    tasks: [
+      "Finalize agenda, format and cohort size",
+      "Lock venue, dates and accommodation",
+      "Approve travel and stipend policy",
+      "Set selection rubric and reviewer panel",
+    ],
+    critical: [1],
+  },
+  {
+    key: "creative-dev",
+    title: "Outreach & Application Build",
+    tasks: [
+      "Draft program page and application form",
+      "Prepare outreach messaging per talent pool",
+      "Build applicant tracking pipeline",
+      "Line up referrers and alumni ambassadors",
+    ],
+  },
+  {
+    key: "production",
+    title: "Applications & Selection",
+    tasks: [
+      "Open applications and run outreach push",
+      "Screen applications against rubric",
+      "Calibrate reviewers on borderline candidates",
+      "Send offers and waitlist decisions",
+    ],
+    critical: [3],
+  },
+  {
+    key: "tech-setup",
+    title: "Logistics Setup",
+    tasks: [
+      "Book participant travel and accommodation",
+      "Confirm catering, accessibility and dietary needs",
+      "Send participant pre-reads and onboarding info",
+      "Finalize facilitator and speaker schedule",
+    ],
+    critical: [0],
+  },
+  {
+    key: "qa",
+    title: "Dry Run & Safeguarding",
+    tasks: [
+      "Run facilitator dry run of key sessions",
+      "Confirm code of conduct and safeguarding contacts",
+      "Verify visa and travel confirmations",
+      "Prepare plan for no-shows and travel delays",
+    ],
+    critical: [1, 2],
+  },
+  {
+    key: "readiness",
+    title: "Event Readiness",
+    tasks: [
+      "Final run-of-show sign-off",
+      "Brief on-site ops and volunteer team",
+      "Reconcile spend to date against budget",
+      "Complete event-readiness checklist",
+    ],
+    critical: [0, 3],
+  },
+  {
+    key: "launch",
+    title: "Workshop Delivery",
+    tasks: [
+      "Welcome and onboard the cohort",
+      "Run sessions and 1:1s per run-of-show",
+      "Hold daily ops and facilitator debriefs",
+      "Escalate and resolve on-site issues",
+    ],
+    critical: [0, 1],
+  },
+  {
+    key: "early-opt",
+    title: "Immediate Follow-Up",
+    tasks: [
+      "Send post-event feedback survey",
+      "Share resources and next-step opportunities",
+      "Make warm introductions to orgs and mentors",
+      "Log participant career intentions",
+    ],
+  },
+  {
+    key: "optimization",
+    title: "Career Pathway Support",
+    tasks: [
+      "Follow up on introductions and applications",
+      "Route strong participants to fellowships and roles",
+      "Track early career moves",
+      "Capture program improvements for next cohort",
+    ],
+  },
+  {
+    key: "review",
+    title: "Impact Review",
+    tasks: [
+      "Impact readout against theory of change",
+      "Review cost per participant and per outcome",
+      "Document lessons learned",
+      "Prepare leadership and funder summary",
+    ],
+  },
+];
+
+const ailaunch: WeekBlueprint[] = [
+  {
+    key: "kickoff",
+    title: "Launch Kickoff",
+    tasks: [
+      "Kickoff with product, ML, safety and legal owners",
+      "Define use case, target users and out-of-scope uses",
+      "Agree launch criteria and go/no-go owners",
+      "Draft risk tier for the feature",
+    ],
+  },
+  {
+    key: "research",
+    title: "Risk & Eval Discovery",
+    tasks: [
+      "Map misuse and harm scenarios",
+      "Review applicable AI policy and regulatory requirements",
+      "Benchmark model options on quality, latency and cost",
+      "Define evaluation metrics and thresholds",
+    ],
+  },
+  {
+    key: "architecture",
+    title: "Eval & Safeguard Design",
+    tasks: [
+      "Design eval suite for quality, safety and bias",
+      "Set release-blocking safety thresholds",
+      "Design guardrails, output filters and fallbacks",
+      "Plan human review and escalation paths",
+    ],
+    critical: [1],
+  },
+  {
+    key: "creative-dev",
+    title: "Build & Prompt Development",
+    tasks: [
+      "Build feature and prompt pipeline",
+      "Draft in-product AI disclosures and user guidance",
+      "Write model card and known limitations",
+      "Prepare launch messaging",
+    ],
+  },
+  {
+    key: "production",
+    title: "Red-Teaming",
+    tasks: [
+      "Run internal red-team exercises",
+      "Triage and fix red-team findings",
+      "Run eval suite against the release candidate",
+      "Document residual risks",
+    ],
+    critical: [1],
+  },
+  {
+    key: "tech-setup",
+    title: "Monitoring & Infrastructure",
+    tasks: [
+      "Set up output logging and abuse monitoring",
+      "Configure feature flags and kill switch",
+      "Load-test inference latency and cost",
+      "Set rate limits and usage quotas",
+    ],
+    critical: [0, 1],
+  },
+  {
+    key: "qa",
+    title: "Safety Review",
+    tasks: [
+      "Safety and policy review sign-off",
+      "Re-run evals after fixes",
+      "Privacy and data-handling review",
+      "Accessibility and UX QA",
+    ],
+    critical: [0, 1],
+  },
+  {
+    key: "readiness",
+    title: "Go/No-Go",
+    tasks: [
+      "Go/no-go review against launch criteria",
+      "Brief support on escalation and known issues",
+      "Rehearse incident response and rollback",
+      "Complete launch-readiness checklist",
+    ],
+    critical: [0, 2],
+  },
+  {
+    key: "launch",
+    title: "Staged Rollout",
+    tasks: [
+      "Release to internal and trusted-tester cohort",
+      "Monitor flagged outputs and incident queue daily",
+      "Expand rollout against guardrail metrics",
+      "Escalate and resolve launch issues",
+    ],
+  },
+  {
+    key: "early-opt",
+    title: "Early Monitoring",
+    tasks: [
+      "Review user feedback and flagged outputs",
+      "Patch prompts and filters for new failure modes",
+      "Track cost per request and latency",
+      "Add real-world failure cases to the eval suite",
+    ],
+  },
+  {
+    key: "optimization",
+    title: "Scale & Optimize",
+    tasks: [
+      "Expand to general availability if guardrails hold",
+      "Optimize quality-cost trade-offs",
+      "Red-team new usage patterns",
+      "Review adoption against targets",
+    ],
+  },
+  {
+    key: "review",
+    title: "Post-Launch Review",
+    tasks: [
+      "Launch readout against success and safety criteria",
+      "Incident and near-miss retrospective",
+      "Update model card and documentation",
+      "Build post-launch roadmap",
+    ],
+  },
+];
+
 export const TASK_LIBRARIES: Record<ScenarioId, WeekBlueprint[]> = {
   marketing,
   saas,
   ecom,
   it,
+  program,
+  ailaunch,
 };
 
 /** Extra tasks injected into specific lifecycle weeks when a channel is selected. */
@@ -606,6 +885,14 @@ export const CHANNEL_TASKS: Record<Channel, Partial<Record<string, string>>> = {
     "early-opt": "Review lead routing SLA compliance",
     review: "Pipeline contribution review with sales ops",
   },
+  "Community & Partner Outreach (University Groups, Referrals)": {
+    research: "Map university groups, partner orgs and referrers",
+    "creative-dev": "Build a shareable outreach kit for organizers",
+    production: "Run info sessions with university groups",
+    readiness: "Confirm partner orgs for post-event introductions",
+    "early-opt": "Thank referrers and share cohort highlights",
+    review: "Review which outreach sources produced admitted participants",
+  },
 };
 
 const GOAL_SCENARIO: Record<Goal, ScenarioId> = {
@@ -615,6 +902,8 @@ const GOAL_SCENARIO: Record<Goal, ScenarioId> = {
   "Lead Generation & Conversion Optimization": "marketing",
   "Brand Awareness & Market Expansion": "marketing",
   "Feature Rollout & Growth Experimentation": "saas",
+  "Talent Program & Workshop Delivery": "program",
+  "AI Product Launch (Evals & Responsible Rollout)": "ailaunch",
 };
 
 const PRESET_SCENARIO: Record<string, ScenarioId> = {
@@ -622,6 +911,8 @@ const PRESET_SCENARIO: Record<string, ScenarioId> = {
   ecom: "ecom",
   it: "it",
   marketing: "marketing",
+  aisafety: "program",
+  ailaunch: "ailaunch",
 };
 
 export function scenarioFor(goal: Goal, presetId: string | null): ScenarioId {

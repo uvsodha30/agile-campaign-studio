@@ -16,7 +16,7 @@ import { SavedCampaigns } from "@/components/campaign/SavedCampaigns";
 import type { IndustryPreset } from "@/lib/brief";
 import { buildDeliveryPlan } from "@/lib/campaign/plan";
 import { buildKpis } from "@/lib/campaign/kpi";
-import { buildBudget } from "@/lib/campaign/budget";
+import { applyBudgetEdits, buildBudget, type BudgetEdits } from "@/lib/campaign/budget";
 import { buildRaidLog, monitoringCadence } from "@/lib/campaign/raid";
 import { computeHealth } from "@/lib/campaign/health";
 import {
@@ -29,10 +29,13 @@ import {
 } from "@/lib/campaign/storage";
 import type {
   CampaignConfig,
+  CustomBudgetLine,
+  KPI,
   KpiStatus,
   RaidStatus,
   SavedCampaign,
 } from "@/lib/campaign/types";
+import type { CustomBudgetLineInput, CustomKpiInput } from "@/lib/campaign/validation";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -65,10 +68,7 @@ function defaultDate() {
 const emptyConfig: CampaignConfig = {
   name: "",
   goal: "SaaS Product Launch (PLG & User Onboarding)",
-  channels: [
-    "Product-Led / In-App (Onboarding Flows, Pop-ups)",
-    "Email & Lifecycle Marketing",
-  ],
+  channels: ["Product-Led / In-App (Onboarding Flows, Pop-ups)", "Email & Lifecycle Marketing"],
   budget: 50000,
   launchDate: defaultDate(),
   risk: "Medium",
@@ -82,8 +82,28 @@ type WorkingState = {
   done: string[];
   kpiTargets: Record<string, string>;
   kpiStatus: Record<string, KpiStatus>;
+  kpiActual: Record<string, string>;
+  customKpis: KPI[];
+  removedKpiIds: string[];
   raidStatus: Record<string, RaidStatus>;
+  budgetOverrides: Record<string, number>;
+  customBudgetLines: CustomBudgetLine[];
+  removedBudgetLineIds: string[];
   activeId: string | null;
+};
+
+const emptyKpiEdits = {
+  kpiTargets: {} as Record<string, string>,
+  kpiStatus: {} as Record<string, KpiStatus>,
+  kpiActual: {} as Record<string, string>,
+  customKpis: [] as KPI[],
+  removedKpiIds: [] as string[],
+};
+
+const emptyBudgetEdits = {
+  budgetOverrides: {} as Record<string, number>,
+  customBudgetLines: [] as CustomBudgetLine[],
+  removedBudgetLineIds: [] as string[],
 };
 
 function Index() {
@@ -92,7 +112,13 @@ function Index() {
   const [done, setDone] = useState<string[]>([]);
   const [kpiTargets, setKpiTargets] = useState<Record<string, string>>({});
   const [kpiStatus, setKpiStatus] = useState<Record<string, KpiStatus>>({});
+  const [kpiActual, setKpiActual] = useState<Record<string, string>>({});
+  const [customKpis, setCustomKpis] = useState<KPI[]>([]);
+  const [removedKpiIds, setRemovedKpiIds] = useState<string[]>([]);
   const [raidStatus, setRaidStatus] = useState<Record<string, RaidStatus>>({});
+  const [budgetOverrides, setBudgetOverrides] = useState<Record<string, number>>({});
+  const [customBudgetLines, setCustomBudgetLines] = useState<CustomBudgetLine[]>([]);
+  const [removedBudgetLineIds, setRemovedBudgetLineIds] = useState<string[]>([]);
   const [saved, setSaved] = useState<SavedCampaign[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -106,7 +132,13 @@ function Index() {
       setDone(w.done ?? []);
       setKpiTargets(w.kpiTargets ?? {});
       setKpiStatus(w.kpiStatus ?? {});
+      setKpiActual(w.kpiActual ?? {});
+      setCustomKpis(w.customKpis ?? []);
+      setRemovedKpiIds(w.removedKpiIds ?? []);
       setRaidStatus(w.raidStatus ?? {});
+      setBudgetOverrides(w.budgetOverrides ?? {});
+      setCustomBudgetLines(w.customBudgetLines ?? []);
+      setRemovedBudgetLineIds(w.removedBudgetLineIds ?? []);
       setActiveId(w.activeId ?? null);
     }
     setHydrated(true);
@@ -120,29 +152,58 @@ function Index() {
       done,
       kpiTargets,
       kpiStatus,
+      kpiActual,
+      customKpis,
+      removedKpiIds,
       raidStatus,
+      budgetOverrides,
+      customBudgetLines,
+      removedBudgetLineIds,
       activeId,
     } satisfies WorkingState);
-  }, [hydrated, config, generated, done, kpiTargets, kpiStatus, raidStatus, activeId]);
+  }, [
+    hydrated,
+    config,
+    generated,
+    done,
+    kpiTargets,
+    kpiStatus,
+    kpiActual,
+    customKpis,
+    removedKpiIds,
+    raidStatus,
+    budgetOverrides,
+    customBudgetLines,
+    removedBudgetLineIds,
+    activeId,
+  ]);
 
   const plan = useMemo(() => (generated ? buildDeliveryPlan(generated) : null), [generated]);
-  const budget = useMemo(() => (generated ? buildBudget(generated) : null), [generated]);
+  const budget = useMemo(() => {
+    if (!generated) return null;
+    const base = buildBudget(generated);
+    const edits: BudgetEdits = {
+      overrides: budgetOverrides,
+      customLines: customBudgetLines,
+      removedIds: removedBudgetLineIds,
+    };
+    return applyBudgetEdits(base, edits);
+  }, [generated, budgetOverrides, customBudgetLines, removedBudgetLineIds]);
   const kpis = useMemo(() => {
     if (!generated) return [];
-    return buildKpis(generated).map((k) => ({
+    const base = buildKpis(generated).filter((k) => !removedKpiIds.includes(k.id));
+    return [...base, ...customKpis].map((k) => ({
       ...k,
       target: kpiTargets[k.id] ?? k.target,
       status: kpiStatus[k.id] ?? k.status,
+      actual: kpiActual[k.id] ?? k.actual ?? "",
     }));
-  }, [generated, kpiTargets, kpiStatus]);
+  }, [generated, customKpis, removedKpiIds, kpiTargets, kpiStatus, kpiActual]);
   const raid = useMemo(() => {
     if (!generated) return [];
     return buildRaidLog(generated).map((r) => ({ ...r, status: raidStatus[r.id] ?? r.status }));
   }, [generated, raidStatus]);
-  const health = useMemo(
-    () => (plan ? computeHealth(plan, raid, done) : null),
-    [plan, raid, done],
-  );
+  const health = useMemo(() => (plan ? computeHealth(plan, raid, done) : null), [plan, raid, done]);
 
   const dirty = !!generated || config.name.trim().length > 0;
 
@@ -173,6 +234,19 @@ function Index() {
     toast.success(`${p.label} scenario applied.`);
   };
 
+  const resetPlanEdits = () => {
+    setDone([]);
+    setKpiTargets(emptyKpiEdits.kpiTargets);
+    setKpiStatus(emptyKpiEdits.kpiStatus);
+    setKpiActual(emptyKpiEdits.kpiActual);
+    setCustomKpis(emptyKpiEdits.customKpis);
+    setRemovedKpiIds(emptyKpiEdits.removedKpiIds);
+    setRaidStatus({});
+    setBudgetOverrides(emptyBudgetEdits.budgetOverrides);
+    setCustomBudgetLines(emptyBudgetEdits.customBudgetLines);
+    setRemovedBudgetLineIds(emptyBudgetEdits.removedBudgetLineIds);
+  };
+
   const generate = () => {
     if (!config.name.trim()) {
       toast.error("Add a campaign name first.");
@@ -182,13 +256,14 @@ function Index() {
       toast.error("Select at least one channel.");
       return;
     }
+    if (!Number.isFinite(config.budget) || config.budget <= 0) {
+      toast.error("Enter a total budget greater than $0.");
+      return;
+    }
     const next = { ...config, name: config.name.trim() };
     setConfig(next);
     setGenerated(next);
-    setDone([]);
-    setKpiTargets({});
-    setKpiStatus({});
-    setRaidStatus({});
+    resetPlanEdits();
     toast.success("Campaign delivery plan generated.");
   };
 
@@ -196,10 +271,7 @@ function Index() {
     if (dirty && !window.confirm("Start a new campaign? Unsaved changes will be lost.")) return;
     setConfig({ ...emptyConfig, launchDate: defaultDate() });
     setGenerated(null);
-    setDone([]);
-    setKpiTargets({});
-    setKpiStatus({});
-    setRaidStatus({});
+    resetPlanEdits();
     setActiveId(null);
     clearWorking();
     toast.success("New campaign started.");
@@ -222,6 +294,12 @@ function Index() {
       kpiTargets,
       kpiStatus,
       raidStatus,
+      kpiActual,
+      customKpis,
+      removedKpiIds,
+      budgetOverrides,
+      customBudgetLines,
+      removedBudgetLineIds,
     };
     persist([entry, ...saved.filter((s) => s.id !== entry.id)]);
     setActiveId(entry.id);
@@ -234,7 +312,13 @@ function Index() {
     setDone(c.done ?? []);
     setKpiTargets(c.kpiTargets ?? {});
     setKpiStatus(c.kpiStatus ?? {});
+    setKpiActual(c.kpiActual ?? {});
+    setCustomKpis(c.customKpis ?? []);
+    setRemovedKpiIds(c.removedKpiIds ?? []);
     setRaidStatus(c.raidStatus ?? {});
+    setBudgetOverrides(c.budgetOverrides ?? {});
+    setCustomBudgetLines(c.customBudgetLines ?? []);
+    setRemovedBudgetLineIds(c.removedBudgetLineIds ?? []);
     setActiveId(c.id);
     toast.success(`Loaded "${c.label}".`);
   };
@@ -257,6 +341,45 @@ function Index() {
     if (!window.confirm(`Delete "${c.label}"?`)) return;
     persist(saved.filter((s) => s.id !== c.id));
     if (activeId === c.id) setActiveId(null);
+  };
+
+  const addCustomKpi = (input: CustomKpiInput) => {
+    const kpi: KPI = {
+      id: newId(),
+      name: input.name,
+      target: input.target,
+      source: input.source,
+      status: "Planned",
+    };
+    setCustomKpis((k) => [...k, kpi]);
+  };
+
+  const removeKpi = (id: string) => {
+    if (customKpis.some((k) => k.id === id)) {
+      setCustomKpis((k) => k.filter((x) => x.id !== id));
+    } else {
+      setRemovedKpiIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+    }
+  };
+
+  const addCustomBudgetLine = (input: CustomBudgetLineInput) => {
+    const id = newId();
+    setCustomBudgetLines((lines) => [...lines, { id, category: input.category }]);
+    setBudgetOverrides((o) => ({ ...o, [id]: input.percent }));
+  };
+
+  const removeBudgetLine = (id: string) => {
+    if (id === "contingency") return;
+    if (customBudgetLines.some((l) => l.id === id)) {
+      setCustomBudgetLines((lines) => lines.filter((x) => x.id !== id));
+    } else {
+      setRemovedBudgetLineIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+    }
+    setBudgetOverrides((o) => {
+      if (!(id in o)) return o;
+      const { [id]: _removed, ...rest } = o;
+      return rest;
+    });
   };
 
   return (
@@ -318,12 +441,7 @@ function Index() {
             </div>
           ) : (
             <>
-              <ExecutiveBrief
-                config={generated}
-                plan={plan}
-                budget={budget}
-                health={health}
-              />
+              <ExecutiveBrief config={generated} plan={plan} budget={budget} health={health} />
               <DeliveryPlanView
                 plan={plan}
                 done={done}
@@ -335,8 +453,18 @@ function Index() {
                 kpis={kpis}
                 onTargetChange={(id, value) => setKpiTargets((t) => ({ ...t, [id]: value }))}
                 onStatusChange={(id, status) => setKpiStatus((s) => ({ ...s, [id]: status }))}
+                onActualChange={(id, value) => setKpiActual((a) => ({ ...a, [id]: value }))}
+                onAdd={addCustomKpi}
+                onRemove={removeKpi}
               />
-              <BudgetAllocationCard budget={budget} />
+              <BudgetAllocationCard
+                budget={budget}
+                onPercentChange={(id, percent) =>
+                  setBudgetOverrides((o) => ({ ...o, [id]: percent }))
+                }
+                onAddLine={addCustomBudgetLine}
+                onRemoveLine={removeBudgetLine}
+              />
               <RAIDLog
                 items={raid}
                 cadence={monitoringCadence(generated)}

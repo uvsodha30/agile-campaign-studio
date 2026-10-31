@@ -75,6 +75,13 @@ const GOAL_KPIS: Record<Goal, Def[]> = {
     { id: "winrate", name: "Winning Variants", source: "Experimentation Platform", target: () => "≥ 1 statistically significant win" },
     { id: "rollout", name: "Rollout Coverage", source: "Feature Flag Registry", target: () => "100% of target cohort" },
   ],
+  "Talent Program & Workshop Delivery": [
+    { id: "applications", name: "Qualified Applications", source: "Application Tracker", target: (c) => `${round((c.budget / 250) * riskFactor(c), 5)}` },
+    { id: "admitted", name: "Participants Admitted", source: "Application Tracker", target: (c) => `${round((c.budget / 2500) * riskFactor(c), 1)}` },
+    { id: "attendance", name: "Attendance Rate", source: "Event Check-in", target: (c) => `≥ ${Math.min(98, 90 * riskFactor(c)).toFixed(0)}%` },
+    { id: "next-step", name: "Participants Taking a High-Impact Next Step", source: "3-Month Follow-Up Survey", target: (c) => `≥ ${(40 * riskFactor(c)).toFixed(0)}% within 3 months` },
+    { id: "cost-participant", name: "Cost per Participant", source: "Finance Tracker", target: (c) => `≤ ${formatCurrency(Math.round(2500 / riskFactor(c)))}` },
+  ],
 };
 
 const CHANNEL_KPIS: Record<Channel, Def> = {
@@ -113,6 +120,12 @@ const CHANNEL_KPIS: Record<Channel, Def> = {
     name: "Sourced Pipeline",
     source: "CRM",
     target: (c) => `${formatCurrency(Math.round(c.budget * 4 * riskFactor(c)))}`,
+  },
+  "Community & Partner Outreach (University Groups, Referrals)": {
+    id: "referral-share",
+    name: "Applications via Partner Referral",
+    source: "Application Tracker",
+    target: (c) => `≥ ${(30 * riskFactor(c)).toFixed(0)}%`,
   },
 };
 

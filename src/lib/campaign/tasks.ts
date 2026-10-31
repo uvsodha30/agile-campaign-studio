@@ -18,6 +18,18 @@ export const PHASE_NAMES = [
   "Optimization & Reporting",
 ] as const;
 
+/** Scenario-specific phase names where the campaign defaults don't fit. */
+export const SCENARIO_PHASE_NAMES: Partial<Record<ScenarioId, readonly string[]>> = {
+  program: [
+    "Discovery & Program Design",
+    "Architecture & Outreach",
+    "Applications & Logistics",
+    "Dry Run & Readiness",
+    "Delivery & Follow-Up",
+    "Career Support & Impact Review",
+  ],
+};
+
 /** Blueprint index -> phase index (pairs of weeks). */
 export function phaseIndexFor(blueprintIndex: number) {
   return Math.min(Math.floor(blueprintIndex / 2), PHASE_NAMES.length - 1);
@@ -549,11 +561,141 @@ const it: WeekBlueprint[] = [
   },
 ];
 
+const program: WeekBlueprint[] = [
+  {
+    key: "kickoff",
+    title: "Program Kickoff",
+    tasks: [
+      "Kickoff with program lead and decision owners",
+      "Define theory of change and target participant profile",
+      "Confirm success criteria and impact measures",
+      "Identify facilitators, mentors and partner orgs",
+    ],
+  },
+  {
+    key: "research",
+    title: "Participant & Content Design",
+    tasks: [
+      "Map target talent pools (AI safety, biosecurity, policy)",
+      "Interview past participants and facilitators",
+      "Draft curriculum and session arc",
+      "Define follow-up survey plan",
+    ],
+  },
+  {
+    key: "architecture",
+    title: "Program Architecture",
+    tasks: [
+      "Finalize agenda, format and cohort size",
+      "Lock venue, dates and accommodation",
+      "Approve travel and stipend policy",
+      "Set selection rubric and reviewer panel",
+    ],
+    critical: [1],
+  },
+  {
+    key: "creative-dev",
+    title: "Outreach & Application Build",
+    tasks: [
+      "Draft program page and application form",
+      "Prepare outreach messaging per talent pool",
+      "Build applicant tracking pipeline",
+      "Line up referrers and alumni ambassadors",
+    ],
+  },
+  {
+    key: "production",
+    title: "Applications & Selection",
+    tasks: [
+      "Open applications and run outreach push",
+      "Screen applications against rubric",
+      "Calibrate reviewers on borderline candidates",
+      "Send offers and waitlist decisions",
+    ],
+    critical: [3],
+  },
+  {
+    key: "tech-setup",
+    title: "Logistics Setup",
+    tasks: [
+      "Book participant travel and accommodation",
+      "Confirm catering, accessibility and dietary needs",
+      "Send participant pre-reads and onboarding info",
+      "Finalize facilitator and speaker schedule",
+    ],
+    critical: [0],
+  },
+  {
+    key: "qa",
+    title: "Dry Run & Safeguarding",
+    tasks: [
+      "Run facilitator dry run of key sessions",
+      "Confirm code of conduct and safeguarding contacts",
+      "Verify visa and travel confirmations",
+      "Prepare plan for no-shows and travel delays",
+    ],
+    critical: [1, 2],
+  },
+  {
+    key: "readiness",
+    title: "Event Readiness",
+    tasks: [
+      "Final run-of-show sign-off",
+      "Brief on-site ops and volunteer team",
+      "Reconcile spend to date against budget",
+      "Complete event-readiness checklist",
+    ],
+    critical: [0, 3],
+  },
+  {
+    key: "launch",
+    title: "Workshop Delivery",
+    tasks: [
+      "Welcome and onboard the cohort",
+      "Run sessions and 1:1s per run-of-show",
+      "Hold daily ops and facilitator debriefs",
+      "Escalate and resolve on-site issues",
+    ],
+    critical: [0, 1],
+  },
+  {
+    key: "early-opt",
+    title: "Immediate Follow-Up",
+    tasks: [
+      "Send post-event feedback survey",
+      "Share resources and next-step opportunities",
+      "Make warm introductions to orgs and mentors",
+      "Log participant career intentions",
+    ],
+  },
+  {
+    key: "optimization",
+    title: "Career Pathway Support",
+    tasks: [
+      "Follow up on introductions and applications",
+      "Route strong participants to fellowships and roles",
+      "Track early career moves",
+      "Capture program improvements for next cohort",
+    ],
+  },
+  {
+    key: "review",
+    title: "Impact Review",
+    tasks: [
+      "Impact readout against theory of change",
+      "Review cost per participant and per outcome",
+      "Document lessons learned",
+      "Prepare leadership and funder summary",
+    ],
+  },
+];
+
 export const TASK_LIBRARIES: Record<ScenarioId, WeekBlueprint[]> = {
   marketing,
   saas,
   ecom,
   it,
+  program,
 };
 
 /** Extra tasks injected into specific lifecycle weeks when a channel is selected. */
@@ -606,6 +748,14 @@ export const CHANNEL_TASKS: Record<Channel, Partial<Record<string, string>>> = {
     "early-opt": "Review lead routing SLA compliance",
     review: "Pipeline contribution review with sales ops",
   },
+  "Community & Partner Outreach (University Groups, Referrals)": {
+    research: "Map university groups, partner orgs and referrers",
+    "creative-dev": "Build a shareable outreach kit for organizers",
+    production: "Run info sessions with university groups",
+    readiness: "Confirm partner orgs for post-event introductions",
+    "early-opt": "Thank referrers and share cohort highlights",
+    review: "Review which outreach sources produced admitted participants",
+  },
 };
 
 const GOAL_SCENARIO: Record<Goal, ScenarioId> = {
@@ -615,6 +765,7 @@ const GOAL_SCENARIO: Record<Goal, ScenarioId> = {
   "Lead Generation & Conversion Optimization": "marketing",
   "Brand Awareness & Market Expansion": "marketing",
   "Feature Rollout & Growth Experimentation": "saas",
+  "Talent Program & Workshop Delivery": "program",
 };
 
 const PRESET_SCENARIO: Record<string, ScenarioId> = {
@@ -622,6 +773,7 @@ const PRESET_SCENARIO: Record<string, ScenarioId> = {
   ecom: "ecom",
   it: "it",
   marketing: "marketing",
+  aisafety: "program",
 };
 
 export function scenarioFor(goal: Goal, presetId: string | null): ScenarioId {

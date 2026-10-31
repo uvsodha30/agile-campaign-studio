@@ -74,7 +74,7 @@ export function CampaignSetup({ config, onChange, onPreset, onGenerate }: Props)
               onClick={() => onPreset(p)}
               aria-pressed={config.presetId === p.id}
               className={cn(
-                "rounded-lg border px-3 py-2 text-xs font-semibold transition-all",
+                "rounded-lg border px-3 py-2 text-xs font-semibold transition-all odd:last:col-span-2",
                 config.presetId === p.id
                   ? "border-primary bg-primary text-primary-foreground shadow-sm"
                   : "border-border bg-card text-foreground hover:border-primary/40 hover:text-primary",

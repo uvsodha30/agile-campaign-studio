@@ -1,6 +1,6 @@
 import type { Channel, Goal, RiskLevel, SprintWeeks } from "@/lib/brief";
 
-export type ScenarioId = "marketing" | "saas" | "ecom" | "it";
+export type ScenarioId = "marketing" | "saas" | "ecom" | "it" | "program";
 
 export type CampaignConfig = {
   name: string;

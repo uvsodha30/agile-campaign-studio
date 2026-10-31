@@ -22,6 +22,7 @@ const BASE: Record<ScenarioId, Record<CatId, number>> = {
   saas: { paid: 30, creative: 22, martech: 28, events: 10 },
   ecom: { paid: 55, creative: 20, martech: 12, events: 3 },
   it: { paid: 10, creative: 18, martech: 45, events: 17 },
+  program: { paid: 5, creative: 12, martech: 10, events: 60 },
 };
 
 const CHANNEL_WEIGHTS: Record<Channel, Partial<Record<CatId, number>>> = {
@@ -31,6 +32,7 @@ const CHANNEL_WEIGHTS: Record<Channel, Partial<Record<CatId, number>>> = {
   "Content & SEO Strategy": { creative: 14, martech: 3 },
   "Developer / Tech Docs & API Portals": { martech: 14, creative: 3 },
   "Outbound Sales Enablement & Events": { events: 16, creative: 3 },
+  "Community & Partner Outreach (University Groups, Referrals)": { events: 8, creative: 4 },
 };
 
 export function contingencyPercent(config: CampaignConfig) {

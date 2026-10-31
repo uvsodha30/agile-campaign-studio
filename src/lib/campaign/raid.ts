@@ -106,6 +106,17 @@ const CHANNEL_RAID: Record<Channel, Candidate[]> = {
       weight: 7,
     },
   ],
+  "Community & Partner Outreach (University Groups, Referrals)": [
+    {
+      id: "ch-community-reach",
+      type: "Dependency",
+      description: "Application volume depends on group organizers and referrers sharing the call on time.",
+      mitigation: "Brief organizers with a ready-to-share outreach kit two weeks before applications open.",
+      owner: "Outreach Lead",
+      base: "Medium",
+      weight: 7,
+    },
+  ],
 };
 
 const GOAL_RAID: Record<Goal, Candidate[]> = {
@@ -247,6 +258,26 @@ const GOAL_RAID: Record<Goal, Candidate[]> = {
       weight: 6,
     },
   ],
+  "Talent Program & Workshop Delivery": [
+    {
+      id: "goal-applicant-fit",
+      type: "Risk",
+      description: "The applicant pool may not include enough participants who match the target profile.",
+      mitigation: "Track qualified applications weekly and widen outreach before the deadline.",
+      owner: "Program Lead",
+      base: "High",
+      weight: 9,
+    },
+    {
+      id: "goal-outcomes",
+      type: "Assumption",
+      description: "Post-program career outcomes can be measured within the follow-up window.",
+      mitigation: "Schedule 3-month follow-up surveys at selection and agree what counts as an outcome.",
+      owner: "Program Lead",
+      base: "Medium",
+      weight: 7,
+    },
+  ],
 };
 
 const SCENARIO_RAID: Record<ScenarioId, Candidate[]> = {
@@ -301,6 +332,35 @@ const SCENARIO_RAID: Record<ScenarioId, Candidate[]> = {
       owner: "Programme Manager",
       base: "Medium",
       weight: 7,
+    },
+  ],
+  program: [
+    {
+      id: "sc-venue",
+      type: "Dependency",
+      description: "Venue, accommodation and travel bookings gate the event dates and cohort size.",
+      mitigation: "Hold a provisional venue at kickoff and confirm once the cohort size is locked.",
+      owner: "Operations Lead",
+      base: "High",
+      weight: 9,
+    },
+    {
+      id: "sc-visa",
+      type: "Risk",
+      description: "International participants may not secure visas or travel in time.",
+      mitigation: "Send invitation letters with offers and keep a waitlist ready to backfill.",
+      owner: "Operations Lead",
+      base: "Medium",
+      weight: 7,
+    },
+    {
+      id: "sc-facilitators",
+      type: "Dependency",
+      description: "Key facilitators and speakers must confirm availability for the full program.",
+      mitigation: "Confirm facilitators before applications open and name a backup for each session.",
+      owner: "Program Lead",
+      base: "Medium",
+      weight: 6,
     },
   ],
 };

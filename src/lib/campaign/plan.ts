@@ -3,6 +3,7 @@ import { budgetRules, extraTasksFor } from "./config";
 import {
   LAUNCH_BLUEPRINT_INDEX,
   PHASE_NAMES,
+  SCENARIO_PHASE_NAMES,
   TASK_LIBRARIES,
   WEEK_SELECTION,
   phaseIndexFor,
@@ -16,7 +17,9 @@ export function planLabel(weeks: SprintWeeks) {
 
 /** Deterministic delivery plan: unique weekly tasks, grouped into agile phases. */
 export function buildDeliveryPlan(config: CampaignConfig): DeliveryPlan {
-  const library = TASK_LIBRARIES[scenarioFor(config.goal, config.presetId)];
+  const scenario = scenarioFor(config.goal, config.presetId);
+  const library = TASK_LIBRARIES[scenario];
+  const phaseNames = SCENARIO_PHASE_NAMES[scenario] ?? PHASE_NAMES;
   const selection = WEEK_SELECTION[config.weeks] ?? WEEK_SELECTION[12]!;
   const launchPos = Math.max(selection.indexOf(LAUNCH_BLUEPRINT_INDEX), 0);
   const launch = parseDate(config.launchDate);
@@ -54,7 +57,7 @@ export function buildDeliveryPlan(config: CampaignConfig): DeliveryPlan {
   const phases: CampaignPhase[] = [];
   selection.forEach((blueprintIndex, i) => {
     const pi = phaseIndexFor(blueprintIndex);
-    const name = PHASE_NAMES[pi]!;
+    const name = phaseNames[pi]!;
     let phase = phases.find((p) => p.name === name);
     if (!phase) {
       phase = { id: `phase-${pi}`, order: "", name, weeks: [] };

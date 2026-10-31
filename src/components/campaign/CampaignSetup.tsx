@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +24,7 @@ import {
   type SprintWeeks,
 } from "@/lib/brief";
 import type { CampaignConfig } from "@/lib/campaign/types";
+import { budgetAmountSchema, validate } from "@/lib/campaign/validation";
 
 type Props = {
   config: CampaignConfig;
@@ -31,6 +34,25 @@ type Props = {
 };
 
 export function CampaignSetup({ config, onChange, onPreset, onGenerate }: Props) {
+  const [budgetRaw, setBudgetRaw] = useState(String(config.budget));
+  const [budgetError, setBudgetError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBudgetRaw(String(config.budget));
+    setBudgetError(null);
+  }, [config.budget]);
+
+  const handleBudgetChange = (value: string) => {
+    setBudgetRaw(value);
+    const result = validate(budgetAmountSchema, value);
+    if (!result.ok) {
+      setBudgetError(result.error);
+      return;
+    }
+    setBudgetError(null);
+    onChange({ budget: result.value });
+  };
+
   const toggleChannel = (c: Channel) =>
     onChange({
       channels: config.channels.includes(c)
@@ -130,9 +152,11 @@ export function CampaignSetup({ config, onChange, onPreset, onGenerate }: Props)
               type="number"
               min={0}
               step={1000}
-              value={config.budget}
-              onChange={(e) => onChange({ budget: Number(e.target.value) })}
+              value={budgetRaw}
+              aria-invalid={budgetError ? true : undefined}
+              onChange={(e) => handleBudgetChange(e.target.value)}
             />
+            {budgetError && <p className="text-xs text-destructive">{budgetError}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="date">Target Launch Date</Label>

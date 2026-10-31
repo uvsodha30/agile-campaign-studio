@@ -50,6 +50,8 @@ export type KPI = {
   target: string;
   source: string;
   status: KpiStatus;
+  /** User-measured actual value, tracked alongside the planning target. */
+  actual?: string;
 };
 
 export type KpiStatus = "Planned" | "Tracking" | "At Risk" | "Achieved";
@@ -60,6 +62,12 @@ export type BudgetLine = {
   category: string;
   percent: number;
   amount: number;
+};
+
+/** A user-added budget category. Its percent lives in the budgetOverrides map. */
+export type CustomBudgetLine = {
+  id: string;
+  category: string;
 };
 
 export type BudgetAllocation = {
@@ -105,4 +113,16 @@ export type SavedCampaign = {
   kpiTargets: Record<string, string>;
   kpiStatus: Record<string, KpiStatus>;
   raidStatus: Record<string, RaidStatus>;
+  /** User-measured actual values, keyed by KPI id (generated or custom). */
+  kpiActual: Record<string, string>;
+  /** User-added KPI rows, layered on top of the generated list. */
+  customKpis: KPI[];
+  /** Generated KPI ids the user removed from view. */
+  removedKpiIds: string[];
+  /** Percent overrides keyed by budget line id (generated or custom). */
+  budgetOverrides: Record<string, number>;
+  /** User-added budget categories, layered on top of the generated lines. */
+  customBudgetLines: CustomBudgetLine[];
+  /** Generated budget line ids the user removed (never includes "contingency"). */
+  removedBudgetLineIds: string[];
 };
